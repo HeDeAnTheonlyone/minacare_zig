@@ -1,28 +1,24 @@
 const std = @import("std");
 const rl = @import("raylib");
-const cfg = @import("config.zig").Config;
-const animation = @import("animation.zig");
+const settings = @import("Settings.zig");
+const AnimationPlayer = @import("components.zig").AnimationPlayer;
 const signals = @import("signals.zig");
-const manager = @import("manager.zig");
-const Minawan = @import("minawan.zig").Minawan;
+const dispatcher = @import("dispatcher.zig");
+const Character = @import("Character.zig");
 const Rectangle = rl.Rectangle;
-const smp = std.heap.smp_allocator;
-const ArrayList = std.ArrayList;
 
 pub fn main() !void {
-    rl.initWindow(cfg.window_width, cfg.window_height, "Minacare");
+    rl.initWindow(settings.window_width, settings.window_height, "Minacare");
     defer rl.closeWindow();
-    rl.setTargetFPS(cfg.target_fps);
+    rl.setTargetFPS(settings.target_fps);
 
-    var update_manager = manager.UpdateManager{
-        .update_list = ArrayList(signals.Callback).init(smp)
-    };
+    var update_dispatcher = dispatcher.CallbackDispatcher{};
 
     const minawan_texture = try rl.loadTexture("assets/textures/minawan/mina_gyat_spritesheet.png");
     defer rl.unloadTexture(minawan_texture);
 
-    var minawan_character = Minawan.init(
-        animation.AnimationPlayer.init(
+    var minawan = Character.init(
+        AnimationPlayer.init(
             minawan_texture,
             512,
             256,
@@ -31,15 +27,15 @@ pub fn main() !void {
         )
     );
 
-    try update_manager.addCallback(signals.Callback{
-        .func = Minawan.updateCallbackAdapter,
-        .ctx = &minawan_character,
+    try update_dispatcher.add(signals.Callback{
+        .func = Character.updateCallbackAdapter,
+        .ctx = &minawan,
     });
 
     while(!rl.windowShouldClose())
     {
         // Logic
-        try update_manager.update(std.math.clamp(rl.getFrameTime(), 0, 0.05));
+        try update_dispatcher.dispatch(std.math.clamp(rl.getFrameTime(), 0, 0.05));
         // ===
         
         // Drawing
@@ -49,6 +45,6 @@ pub fn main() !void {
 
         rl.drawFPS(15, 15);
         
-        minawan_character.draw();
+        minawan.draw();
     }
 }

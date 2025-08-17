@@ -21,24 +21,24 @@ pub const CallbackCaster = struct {
 
         return if (@typeInfo(T) == .pointer) @intFromPtr(value)
         else blk: {
-            const sized_int = @Type( .{ .int = .{
+            const t_sized_int = @Type( .{ .int = .{
                 .signedness = .unsigned,
                 .bits = @bitSizeOf(T),
             }});
 
-            break :blk @as(sized_int, @bitCast(value));
+            break :blk @as(t_sized_int, @bitCast(value));
         };
     }
 
-    pub fn unpackParam(T: type, value: usize) T {   
+    pub fn unpackParam(comptime T: type, value: usize) T {   
         return if (@typeInfo(T) == .pointer) @ptrFromInt(value)
         else blk: {
-            const sized_int = @Type( .{ .int = .{
+            const t_sized_int = @Type( .{ .int = .{
                 .signedness = .unsigned,
                 .bits = @bitSizeOf(T),
             }});
 
-            break :blk @bitCast(@as(sized_int, @intCast(value)));
+            break :blk @bitCast(@as(t_sized_int, @intCast(value)));
         };
     }
 };

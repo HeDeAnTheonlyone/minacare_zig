@@ -1,10 +1,9 @@
 const std = @import("std");
 const rl = @import("raylib");
-const cfg = @import("config.zig").Config;
 const unpackParam = @import("signals.zig").CallbackCaster.packParam;
 const Rectangle = rl.Rectangle;
 
-const NoError = error{};
+const DummyError = error{};
 
 pub const AnimationPlayer = struct {
     texture: rl.Texture2D,
@@ -12,7 +11,7 @@ pub const AnimationPlayer = struct {
     frame_width: i32,
     frame_height: i32,
     sub_frame_counter: f32 = 0,
-    frame_time: u8 = 0,
+    frame_time: f32 = 0,
     total_frames: u8 = 0,
     current_frame: u8 = 0,
     h_flip: bool = false,
@@ -20,7 +19,7 @@ pub const AnimationPlayer = struct {
 
     const Self = @This();
 
-    pub fn init(texture: rl.Texture2D, frame_width: i32, frame_height: i32, frame_time: u8, total_frames: u8) Self {
+    pub fn init(texture: rl.Texture2D, frame_width: i32, frame_height: i32, frame_time: f32, total_frames: u8) Self {
         var obj = Self {
             .texture = texture,
             .frame_width = frame_width,
@@ -28,7 +27,7 @@ pub const AnimationPlayer = struct {
             .frame_time  = frame_time,
             .total_frames = total_frames,
         };
-        obj.nextFrame();
+        updateFrame(&obj);
         return obj;
     }
 
@@ -42,28 +41,33 @@ pub const AnimationPlayer = struct {
 
     /// Adapter for the update function to work in a callback
     /// Requires `self: *AnimationPlayer` and `delta: f32`
-    pub fn updateCallbackAdapter(ctx: *anyopaque, param: ?usize) NoError!void {
+    pub fn updateCallbackAdapter(ctx: *anyopaque, param: ?usize) DummyError!void {
         const self: *AnimationPlayer = @ptrCast(@alignCast(ctx));
         const delta: f32 = unpackParam(f32, param.?);
 
         update(self, delta);
     }
 
+    /// The main update function that handles the whole process of this object 
     pub fn update(self: *Self, delta: f32) void {
+        updateFrameTime(self, delta);
+    }
+
+    fn updateFrameTime(self: *Self, delta: f32) void {
         if (self.paused) return;
-        self.sub_frame_counter += delta * cfg.target_fps;
-        if (@as(u8, (@intFromFloat(self.sub_frame_counter))) < self.frame_time) return;
+        self.sub_frame_counter += 60 * delta;
+        if (self.sub_frame_counter < self.frame_time) return;
         self.sub_frame_counter = 0;
-        nextFrame(self);
+        updateFrame(self);
     }
 
     /// Sets and updates the animations frame
     pub fn setFrame(self: *Self, frame: u8) void {
         self.current_frame = frame;
-        nextFrame(self);
+        updateFrame(self);
     }
 
-    fn nextFrame(self: *Self) void {
+    fn updateFrame(self: *Self) void {
         const columns = @divFloor(self.texture.width, self.frame_width);
         const rows = @divFloor(self.texture.height, self.frame_height);
 

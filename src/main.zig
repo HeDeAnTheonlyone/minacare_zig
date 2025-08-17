@@ -2,7 +2,6 @@ const std = @import("std");
 const rl = @import("raylib");
 const settings = @import("Settings.zig");
 const AnimationPlayer = @import("components.zig").AnimationPlayer;
-const signals = @import("signals.zig");
 const dispatcher = @import("dispatcher.zig");
 const Character = @import("Character.zig");
 const Rectangle = rl.Rectangle;
@@ -14,22 +13,35 @@ pub fn main() !void {
 
     var update_dispatcher = dispatcher.CallbackDispatcher{};
 
-    const minawan_texture = try rl.loadTexture("assets/textures/minawan/mina_gyat_spritesheet.png");
-    defer rl.unloadTexture(minawan_texture);
+    const cerby_texture = try rl.loadTexture("assets/textures/cerby_walk_spritesheet.png");
+    defer rl.unloadTexture(cerby_texture);
 
-    var minawan = Character.init(
+    var cerby = Character.init(
         AnimationPlayer.init(
-            minawan_texture,
-            512,
+            cerby_texture,
             256,
-            5,
-            23
-        )
+            256,
+            7,
+        ),
+        5,
+        50
     );
 
-    try update_dispatcher.add(signals.Callback{
+    // walk animatuion
+    try cerby.animation.addAnimation(.{
+        .start_frame = 0,
+        .end_frame = 1,
+    });
+
+    // stand animation
+    try cerby.animation.addAnimation(.{
+        .start_frame = 0,
+        .end_frame = 0,
+    });
+
+    try update_dispatcher.add(.{
         .func = Character.updateCallbackAdapter,
-        .ctx = &minawan,
+        .ctx = &cerby,
     });
 
     while(!rl.windowShouldClose())
@@ -45,6 +57,6 @@ pub fn main() !void {
 
         rl.drawFPS(15, 15);
         
-        minawan.draw();
+        cerby.draw();
     }
 }

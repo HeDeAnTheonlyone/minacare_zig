@@ -9,14 +9,15 @@ const Vector2 = rl.Vector2;
 animation: AnimationPlayer,
 hitbox: Rectangle,
 pos: Vector2,
-acceleration: f32 = 5,
-max_speed: f32 = 50,
+motion: Vector2 = Vector2{.x = 0, .y = 0},
+acceleration: f32 = 3,
+max_speed: f32 = 35,
+stopping_distance: f32 = 350,
 velocity: f32 = 0,
-stopping_distance: f32 = 300,
 
 const Self = @This();
 
-pub fn init(animation: AnimationPlayer) Self {
+pub fn init(animation: AnimationPlayer, acceleration: f32, max_speed: f32) Self {
     return Self{
         .animation = animation,
         .hitbox = animation.getFrameRect(),
@@ -24,6 +25,8 @@ pub fn init(animation: AnimationPlayer) Self {
             .x = @floatFromInt(@divFloor(settings.window_width, 2)),
             .y = @floatFromInt(@divFloor(settings.window_height, 2)),
         },
+        .acceleration = acceleration,
+        .max_speed = max_speed,
     };
 }
 
@@ -31,13 +34,14 @@ pub fn updateCallbackAdapter(ctx: *anyopaque, param: ?usize) !void {
     const self: *Self = @alignCast(@ptrCast(ctx));
     const delta = unpackParam(f32, param.?);
 
-    update(self, delta);
+    try update(self, delta);
 }
 
-fn update(self: *Self, delta: f32) void {
+fn update(self: *Self, delta: f32) !void {
     const target_pos = rl.getMousePosition();
 
     move(self, target_pos, delta);
+    try updateVisuals(self);
 
     self.animation.update(delta);
 }
@@ -54,10 +58,10 @@ pub fn draw(self: *Self) void {
 }
 
 fn move(self: *Self, target_pos: Vector2, delta: f32) void {
-    const target_dir = Vector2.subtract(target_pos, self.pos);
+    self.motion = Vector2.subtract(target_pos, self.pos);
 
     self.velocity =
-        if (target_dir.length() > self.stopping_distance) std.math.clamp(
+        if (self.motion.length() > self.stopping_distance) std.math.clamp(
             self.velocity + self.acceleration * delta,
             0,
             self.max_speed * 0.1
@@ -68,9 +72,14 @@ fn move(self: *Self, target_pos: Vector2, delta: f32) void {
             self.max_speed * 0.1
         );
     
-    const lerp_amount = std.math.clamp(self.velocity / target_dir.length(), 0, 1);
+    const lerp_amount = std.math.clamp(self.velocity / self.motion.length(), 0, 1);
     self.pos = Vector2.lerp(self.pos, target_pos, lerp_amount);
+}
 
-    if (target_dir.x > 0) self.animation.h_flip = false
-    else if (target_dir.x < 0) self.animation.h_flip = true;
+fn updateVisuals(self: *Self) !void {
+    if (self.motion.x > 0) self.animation.h_flip = false
+    else if (self.motion.x < 0) self.animation.h_flip = true;
+
+    if (self.velocity == 0) try self.animation.switchAnimation(1)
+    else try self.animation.switchAnimation(0);
 }

@@ -12,20 +12,32 @@ pub const AnimationPlayer = struct {
     frame_height: i32,
     sub_frame_counter: f32 = 0,
     frame_time: f32 = 0,
-    total_frames: u8 = 0,
-    current_frame: u8 = 0,
+    animations: [max_animations]Animation = undefined,
+    current_frame: u16 = 0,
+    animation_count: u8 = 0,
+    current_animation: u8 = 0,
     h_flip: bool = false,
     paused: bool = false,
 
     const Self = @This();
+    const max_animations = 16;
 
-    pub fn init(texture: rl.Texture2D, frame_width: i32, frame_height: i32, frame_time: f32, total_frames: u8) Self {
+    pub const Animation = struct {
+        start_frame: u16,
+        end_frame: u16,
+
+        /// Returns the total amount of frames for this animation
+        pub fn getFramesCount(self: *Animation) u16 {
+            return self.end_frame - self.start_frame + 1;
+        }
+    };
+
+    pub fn init(texture: rl.Texture2D, frame_width: i32, frame_height: i32, frame_time: f32) Self {
         var obj = Self {
             .texture = texture,
             .frame_width = frame_width,
             .frame_height = frame_height,
             .frame_time  = frame_time,
-            .total_frames = total_frames,
         };
         updateFrame(&obj);
         return obj;
@@ -54,6 +66,7 @@ pub const AnimationPlayer = struct {
     }
 
     fn updateFrameTime(self: *Self, delta: f32) void {
+        if (self.animations[self.current_animation].getFramesCount() == 1) return;
         if (self.paused) return;
         self.sub_frame_counter += 60 * delta;
         if (self.sub_frame_counter < self.frame_time) return;
@@ -61,18 +74,14 @@ pub const AnimationPlayer = struct {
         updateFrame(self);
     }
 
-    /// Sets and updates the animations frame
-    pub fn setFrame(self: *Self, frame: u8) void {
-        self.current_frame = frame;
-        updateFrame(self);
-    }
-
     fn updateFrame(self: *Self) void {
         const columns = @divFloor(self.texture.width, self.frame_width);
         const rows = @divFloor(self.texture.height, self.frame_height);
 
-        const column = @mod(self.current_frame, columns);
-        const row = @mod(@divFloor(self.current_frame, columns), rows);
+        const frame = self.animations[self.current_animation].start_frame + self.current_frame;
+
+        const column = @mod(frame, columns);
+        const row = @mod(@divFloor(frame, columns), rows);
 
         self.frame_rect = Rectangle{
             .x = @floatFromInt(column * self.frame_width),
@@ -82,7 +91,32 @@ pub const AnimationPlayer = struct {
         };
 
         self.current_frame += 1;
-        if (self.current_frame >= self.total_frames) self.current_frame = 0;
+        const total_frames = self.animations[self.current_animation].getFramesCount();
+        if (self.current_frame >= total_frames) self.current_frame = 0;
+    }
+
+    pub fn addAnimation(self: *Self, anim: Animation) !void {
+        if (self.animation_count == max_animations) return error.OutOfMemory;
+        
+        self.animations[self.animation_count] = anim;
+        self.animation_count += 1;
+    }
+
+    pub fn switchAnimation(self: *Self, id: u8) !void {
+        if (id == self.current_animation) return;
+        if (id > self.animation_count - 1) return error.OutOfBounds;
+        self.current_animation = id;
+        self.current_frame = self.animations[id].start_frame;
+        self.sub_frame_counter = 0;
+        updateFrame(self);
+    }
+
+    /// Sets and updates the animations frame
+    pub fn setFrame(self: *Self, frame: u8) void {
+        self.current_frame = frame;
+        const total_frames = self.animations[self.current_animation].getFramesCount();
+        if (self.current_frame >= total_frames) self.current_frame = 0;
+        updateFrame(self);
     }
 
     pub fn getFrameRect(self: *const Self) Rectangle {

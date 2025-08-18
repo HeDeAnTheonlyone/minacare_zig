@@ -13,31 +13,8 @@ pub fn main() !void {
 
     var update_dispatcher = dispatcher.CallbackDispatcher{};
 
-    const cerby_texture = try rl.loadTexture("assets/textures/cerby_walk_spritesheet.png");
-    defer rl.unloadTexture(cerby_texture);
-
-    var cerby = Character.init(
-        AnimationPlayer.init(
-            cerby_texture,
-            256,
-            256,
-            7,
-        ),
-        5,
-        50
-    );
-
-    // walk animatuion
-    try cerby.animation.addAnimation(.{
-        .start_frame = 0,
-        .end_frame = 1,
-    });
-
-    // stand animation
-    try cerby.animation.addAnimation(.{
-        .start_frame = 0,
-        .end_frame = 0,
-    });
+    var cerby = try Character.initTemplate(.Cerby);
+    defer cerby.deinit();
 
     try update_dispatcher.add(.{
         .func = Character.updateCallbackAdapter,

@@ -2,11 +2,12 @@ const std = @import("std");
 const rl = @import("raylib");
 const unpackParam = @import("signals.zig").CallbackCaster.packParam;
 const Rectangle = rl.Rectangle;
+const Vector2 = rl.Vector2;
 
 const DummyError = error{};
 
 pub const AnimationPlayer = struct {
-    texture: rl.Texture2D,
+    texture: rl.Texture,
     frame_rect: Rectangle = undefined,
     frame_width: i32,
     frame_height: i32,
@@ -17,10 +18,11 @@ pub const AnimationPlayer = struct {
     animation_count: u8 = 0,
     current_animation: u8 = 0,
     h_flip: bool = false,
+    looping: bool = true,
     paused: bool = false,
 
     const Self = @This();
-    const max_animations = 16;
+    const max_animations = 64;
 
     pub const Animation = struct {
         start_frame: u16,
@@ -41,6 +43,10 @@ pub const AnimationPlayer = struct {
         };
         updateFrame(&obj);
         return obj;
+    }
+
+    pub fn deinit(self: *Self) void {
+        rl.unloadTexture(self.texture);
     }
 
     pub fn draw(self: Self, position: rl.Vector2) void {
@@ -92,7 +98,10 @@ pub const AnimationPlayer = struct {
 
         self.current_frame += 1;
         const total_frames = self.animations[self.current_animation].getFramesCount();
-        if (self.current_frame >= total_frames) self.current_frame = 0;
+        if (self.current_frame >= total_frames) {
+            if (self.looping) self.current_frame = 0
+            else self.current_frame = total_frames;
+        }
     }
 
     pub fn addAnimation(self: *Self, anim: Animation) !void {
@@ -102,11 +111,11 @@ pub const AnimationPlayer = struct {
         self.animation_count += 1;
     }
 
-    pub fn switchAnimation(self: *Self, id: u8) !void {
+    pub fn setAnimation(self: *Self, id: u8) !void {
         if (id == self.current_animation) return;
         if (id > self.animation_count - 1) return error.OutOfBounds;
         self.current_animation = id;
-        self.current_frame = self.animations[id].start_frame;
+        self.current_frame = 0;
         self.sub_frame_counter = 0;
         updateFrame(self);
     }
@@ -126,5 +135,35 @@ pub const AnimationPlayer = struct {
             @floatFromInt(self.frame_width),
             @floatFromInt(self.frame_height),
         );
+    }
+};
+
+pub const Movement = struct {
+    pos: Vector2 = .{.x = 0, .y = 0},
+    motion: Vector2 = .{.x = 0, .y = 0},
+    velocity: f32 = 0,
+    acceleration: f32 = 0,
+    max_speed: f32 = 0,
+    stopping_distance: f32 = 0,
+
+    const Self = @This();
+
+    pub fn move(self: *Self, target_pos: Vector2, delta: f32) void {
+        self.motion = Vector2.subtract(target_pos, self.pos);
+
+        self.velocity =
+            if (self.motion.length() > self.stopping_distance) std.math.clamp(
+                self.velocity + self.acceleration * delta,
+                0,
+                self.max_speed * 0.1
+            )
+            else std.math.clamp(
+                self.velocity - self.acceleration * 1.5 * delta,
+                0,
+                self.max_speed * 0.1
+            );
+        
+        const lerp_amount = std.math.clamp(self.velocity / self.motion.length(), 0, 1);
+        self.pos = Vector2.lerp(self.pos, target_pos, lerp_amount);
     }
 };

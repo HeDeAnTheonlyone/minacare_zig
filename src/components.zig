@@ -49,11 +49,13 @@ pub const AnimationPlayer = struct {
         rl.unloadTexture(self.texture);
     }
 
-    pub fn draw(self: Self, position: rl.Vector2) void {
-        rl.drawTextureRec(
+    pub fn draw(self: Self, pos: rl.Vector2) void {
+        rl.drawTexturePro(
             self.texture,
             self.frame_rect,
-            position,
+            Rectangle.init(pos.x, pos.y, self.frame_rect.width * 8, self.frame_rect.height * 8),
+            Vector2.zero(),
+            0,
             rl.Color.white);
     }
 
@@ -74,6 +76,7 @@ pub const AnimationPlayer = struct {
     fn updateFrameTime(self: *Self, delta: f32) void {
         if (self.animations[self.current_animation].getFramesCount() == 1) return;
         if (self.paused) return;
+        if (self.frame_time < 1) return;
         self.sub_frame_counter += 60 * delta;
         if (self.sub_frame_counter < self.frame_time) return;
         self.sub_frame_counter = 0;
@@ -141,29 +144,40 @@ pub const AnimationPlayer = struct {
 pub const Movement = struct {
     pos: Vector2 = .{.x = 0, .y = 0},
     motion: Vector2 = .{.x = 0, .y = 0},
-    velocity: f32 = 0,
-    acceleration: f32 = 0,
-    max_speed: f32 = 0,
-    stopping_distance: f32 = 0,
+    // velocity: f32 = 0,
+    // acceleration: f32 = 0,
+    speed: f32 = 0,
+    // stopping_distance: f32 = 0,
 
     const Self = @This();
 
-    pub fn move(self: *Self, target_pos: Vector2, delta: f32) void {
-        self.motion = Vector2.subtract(target_pos, self.pos);
-
-        self.velocity =
-            if (self.motion.length() > self.stopping_distance) std.math.clamp(
-                self.velocity + self.acceleration * delta,
-                0,
-                self.max_speed * 0.1
-            )
-            else std.math.clamp(
-                self.velocity - self.acceleration * 1.5 * delta,
-                0,
-                self.max_speed * 0.1
-            );
-        
-        const lerp_amount = std.math.clamp(self.velocity / self.motion.length(), 0, 1);
-        self.pos = Vector2.lerp(self.pos, target_pos, lerp_amount);
+    pub fn init(speed: f32) Self {
+        return Self{ .speed = speed };
     }
+
+    pub fn move(self: *Self, input_vec: Vector2, delta: f32) void {
+        const a = self.speed * delta;
+        self.motion = input_vec.multiply(Vector2{.x = a, .y = a});
+        
+        self.pos = self.pos.add(self.motion);
+    }
+
+    // pub fn smooth_in_out_move(self: *Self, target_pos: Vector2, delta: f32) void {
+    //     self.motion = Vector2.subtract(target_pos, self.pos);
+
+    //     self.velocity =
+    //         if (self.motion.length() > self.stopping_distance) std.math.clamp(
+    //             self.velocity + self.acceleration * delta,
+    //             0,
+    //             self.max_speed * 0.1
+    //         )
+    //         else std.math.clamp(
+    //             self.velocity - self.acceleration * 1.5 * delta,
+    //             0,
+    //             self.max_speed * 0.1
+    //         );
+        
+    //     const lerp_amount = std.math.clamp(self.velocity / self.motion.length(), 0, 1);
+    //     self.pos = Vector2.lerp(self.pos, target_pos, lerp_amount);
+    // }
 };

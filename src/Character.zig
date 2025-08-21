@@ -1,6 +1,7 @@
 const std = @import("std");
 const rl = @import("raylib");
 const settings = @import("Settings.zig");
+const input = @import("input.zig");
 const unpackParam = @import("signals.zig").CallbackCaster.unpackParam; 
 const AnimationPlayer = @import("components.zig").AnimationPlayer;
 const Movement = @import("components.zig").Movement;
@@ -33,19 +34,18 @@ pub fn updateCallbackAdapter(ctx: *anyopaque, param: ?usize) !void {
 }
 
 fn update(self: *Self, delta: f32) !void {
-    const target_pos = rl.getMousePosition();
+    const vec = input.getInputVector();
 
-    self.movement.move(target_pos, delta);
+    self.movement.move(vec, delta);
     try self.updateVisuals();
-    std.debug.print("{d}, {d}\n", .{self.animation.current_animation, self.animation.current_frame + self.animation.animations[self.animation.current_animation].start_frame});
     self.animation.update(delta);
 }
 
 fn updateVisuals(self: *Self) !void {
-    if (self.movement.motion.x > 0) self.animation.h_flip = false
-    else if (self.movement.motion.x < 0) self.animation.h_flip = true;
+    if (self.movement.motion.x < 0) self.animation.h_flip = false
+    else if (self.movement.motion.x > 0) self.animation.h_flip = true;
 
-    if (self.movement.velocity == 0) try self.animation.setAnimation(0)
+    if (self.movement.motion.length() == 0) try self.animation.setAnimation(0)
     else try self.animation.setAnimation(1);
 }
 
@@ -62,25 +62,24 @@ pub fn draw(self: *Self) void {
 
 const Template = enum {
     Cerby,
-    Minagyatt,
+    BlueMinawan,
+    Debug,
 };
 
 /// Init a new character with the given template. Caller is responsible to deinit the Character at the end of its use.
 pub fn initTemplate(template: Template) !Self {
     return switch (template) {
         .Cerby => blk: {
-            const tex = try rl.loadTexture("assets/textures/cerby_spritesheet.png");
+            const tex = try rl.loadTexture("assets/textures/characters_spritesheet.png");
             var obj = Self.init(
                 AnimationPlayer.init(
                     tex,
-                    256,
-                    256,
+                    16,
+                    16,
                     7
                 ),
                 .{
-                    .acceleration = 5,
-                    .max_speed = 50,
-                    .stopping_distance = 350
+                    .speed = 100,
                 },
             );
 
@@ -88,31 +87,47 @@ pub fn initTemplate(template: Template) !Self {
             try obj.animation.addAnimation(.{ .start_frame = 0, .end_frame = 0 });
 
             // Walking
-            try obj.animation.addAnimation(.{ .start_frame = 0, .end_frame = 1 });
+            try obj.animation.addAnimation(.{ .start_frame = 0, .end_frame = 4 });
 
             break :blk obj;
         },
-        .Minagyatt => blk: {
-            const tex = try rl.loadTexture("assets/textures/minagyatt_spritesheet.png");
+        .BlueMinawan => blk: {
+            const tex = try rl.loadTexture("assets/textures/characters_spritesheet.png");
             var obj = Self.init(
                 AnimationPlayer.init(
                     tex,
-                    512,
-                    256,
+                    16,
+                    16,
                     5
                 ),
-                .{
-                    .acceleration = 3,
-                    .max_speed = 35,
-                    .stopping_distance = 350
-                },
+                Movement.init(40),
             );
 
             // Standing
-            try obj.animation.addAnimation(.{ .start_frame = 6, .end_frame = 6 });
+            try obj.animation.addAnimation(.{ .start_frame = 16, .end_frame = 16 });
 
             // Walking
-            try obj.animation.addAnimation(.{ .start_frame = 0, .end_frame = 22 });
+            try obj.animation.addAnimation(.{ .start_frame = 16, .end_frame = 16 });
+
+            break :blk obj;
+        },
+        .Debug => blk: {
+            const tex = try rl.loadTexture("assets/textures/characters_spritesheet.png");
+            var obj = Self.init(
+                AnimationPlayer.init(
+                    tex,
+                    16,
+                    16,
+                    0
+                ),
+                Movement.init(100)
+            );
+
+            // Standing
+            try obj.animation.addAnimation(.{ .start_frame = 32, .end_frame = 32 });
+
+            // Walking
+            try obj.animation.addAnimation(.{ .start_frame = 32, .end_frame = 32 });
 
             break :blk obj;
         },

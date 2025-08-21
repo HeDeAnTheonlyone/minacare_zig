@@ -23,6 +23,8 @@ pub fn main() !void {
 
     while(!rl.windowShouldClose())
     {
+        if (rl.isKeyDown(.space)) rl.toggleFullscreen();
+
         // Logic
         try update_dispatcher.dispatch(std.math.clamp(rl.getFrameTime(), 0, 0.05));
         // ===
@@ -33,7 +35,6 @@ pub fn main() !void {
         rl.clearBackground(rl.Color.ray_white);
 
         rl.drawFPS(15, 15);
-        
         cerby.draw();
     }
 }

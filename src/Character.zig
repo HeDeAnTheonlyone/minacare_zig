@@ -17,7 +17,7 @@ const Self = @This();
 
 /// Deinitialize with `deinit()`
 fn init(animation: AnimationPlayer, movement: Movement) Self {
-    return Self{
+    return .{
         .animation = animation,
         .movement = movement,
         .hitbox = animation.getFrameRect(),

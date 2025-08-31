@@ -58,8 +58,8 @@ pub const AnimationPlayer = struct {
             Rectangle.init(
                 pos.x,
                 pos.y,
-                self.frame_rect.width * 2 * settings.getRsolutionRation(),
-                self.frame_rect.height * 2 * settings.getRsolutionRation()
+                self.frame_rect.width * settings.getRsolutionRatio(),
+                self.frame_rect.height * settings.getRsolutionRatio()
             ),
             Vector2.zero(),
             0,
@@ -151,16 +151,16 @@ pub const AnimationPlayer = struct {
 pub const Movement = struct {
     pos: Vector2 = .{.x = 0, .y = 0},
     motion: Vector2 = .{.x = 0, .y = 0},
-    speed: f32 = 0,
+    speed: f32,
 
     const Self = @This();
 
     pub fn init(speed: f32) Self {
-        return Self{ .speed = speed };
+        return .{ .speed = speed };
     }
 
     pub fn move(self: *Self, input_vec: Vector2, delta: f32) void {
-        const s = self.speed * delta * settings.getRsolutionRation();
+        const s = self.speed * delta * settings.getRsolutionRatio();
         self.motion = input_vec.multiply(Vector2{.x = s, .y = s});
 
         self.pos = self.pos.add(self.motion);

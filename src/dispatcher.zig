@@ -2,10 +2,11 @@ const std = @import("std");
 const signals = @import("signals.zig");
 
 pub const CallbackDispatcher = struct {
-    callback_list: [max_callbacks]signals.Callback = undefined,
-    len: u8 = 0,
+    callback_list: [max_callbacks]signals.Callback,
+    len: u8,
 
     const Self = @This();
+    pub const init = Self{.callback_list = undefined, .len = 0};
     const max_callbacks = 255;
 
     pub fn dispatch(self: *Self, delta: f32) !void {

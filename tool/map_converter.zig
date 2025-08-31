@@ -1,7 +1,7 @@
 const std = @import("std");
 const rl = @import("raylib").raylib_module;
 const settings = @import("../src/Settings.zig");
-const Map = @import("../src/tile_map.zig").StoredMap;
+const Map = @import("../src/TileMap.zig").StoredMap;
 
 /// Intermediate types for the data cleanup and conversion
 const tiled_types = struct {
@@ -22,7 +22,7 @@ const tiled_types = struct {
     };
 
     const TileChunk = struct {
-        data: []u32,
+        data: []const u32,
         x: i32,
         y: i32,
     };
@@ -33,7 +33,7 @@ const tiled_types = struct {
         starty:i32, 
         width: u32, // measured in tiles
         height: u32, // measured in tiles
-        name: []u8,
+        name: []const u8,
     };
 
     const RectObj = struct {
@@ -50,8 +50,8 @@ const tiled_types = struct {
     const PointObj = struct {
         x: i32,
         y: i32,
-        name: []u8,
-        @"type": []u8,
+        name: []const u8,
+        @"type": []const u8,
     };
 
     const MarkerLayer = struct {

@@ -1,6 +1,7 @@
 const std = @import("std");
+const rl = @import("raylib").raylib_module;
 const settings = @import("../src/Settings.zig");
-const Map = @import("../src/StoredMap.zig");
+const Map = @import("../src/tile_map.zig").StoredMap;
 
 /// Intermediate types for the data cleanup and conversion
 const tiled_types = struct {
@@ -70,10 +71,10 @@ pub fn start() !void {
     defer maps_dir.close();
     var maps_iter = dev_maps_dir.iterate();
 
-    while (try maps_iter.next()) |map| {
-        switch (map.kind) {
+    while (try maps_iter.next()) |m| {
+        switch (m.kind) {
             .file => {
-                const file = try dev_maps_dir.openFile(map.name, .{});
+                const file = try dev_maps_dir.openFile(m.name, .{});
                 var file_reader = file.reader(&.{});
                 var json_str = std.io.Writer.Allocating.init(arena_allocator);
                 defer json_str.deinit();
@@ -86,7 +87,7 @@ pub fn start() !void {
                     try std.mem.concat(
                         arena_allocator,
                         u8,
-                        &.{map.name[0..map.name.len - 4], "zon"}
+                        &.{m.name[0..m.name.len - 4], "zon"}
                     ),
                     .{}
                 );
@@ -198,21 +199,15 @@ fn covertMap(allocator: std.mem.Allocator, map_data: tiled_types.MapData) !Map {
             .collision_shapes = blk: {
                 const col_objs = map_data.collision_layer.objects;
                 var collisions = try allocator.alloc(
-                    Map.CollisionMap.CollisionMapEntry,
+                    rl.Rectangle,
                     col_objs.len
                 );
                 for (0..collisions.len) |i| {
-                    collisions[i] = Map.CollisionMap.CollisionMapEntry{
-                        .key = Map.CollisionMap.CollisionMapEntry.Vector2{
-                            .x = @floatFromInt(@divFloor(col_objs[i].x, settings.tile_size)),
-                            .y = @floatFromInt(@divFloor(col_objs[i].y, settings.tile_size))
-                        },
-                        .value = Map.CollisionMap.CollisionMapEntry.Rectangle{
-                            .x = @floatFromInt(col_objs[i].x),
-                            .y = @floatFromInt(col_objs[i].y),
-                            .width = @floatFromInt(col_objs[i].width),
-                            .height = @floatFromInt(col_objs[i].height),
-                        }
+                    collisions[i] = rl.Rectangle{
+                        .x = @floatFromInt(col_objs[i].x),
+                        .y = @floatFromInt(col_objs[i].y),
+                        .width = @floatFromInt(col_objs[i].width),
+                        .height = @floatFromInt(col_objs[i].height),
                     };
                 }
                 break :blk collisions;

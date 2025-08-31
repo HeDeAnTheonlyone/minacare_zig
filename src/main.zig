@@ -20,7 +20,7 @@ pub fn main() !void {
     var update_dispatcher = dispatcher.CallbackDispatcher{};
 
     var map_file = try std.fs.cwd().openFile("assets/maps/test.zon", .{});
-    var map = try tile_map.Map.load(gpa, &map_file); 
+    var map = try tile_map.load(gpa, &map_file);
     defer map.deinit(gpa);
     map_file.close();
 

@@ -37,7 +37,8 @@ pub fn updateCallbackAdapter(ctx: *anyopaque, param: ?usize) !void {
 
 fn update(self: *Self, delta: f32) !void {
     const vec = input.getInputVector();
-
+    //TODO make update collision and movement so that movement can be canceled if it would end up in a collision shape
+    self.updateHitbox();
     self.movement.move(vec, delta);
     try self.updateVisuals();
     self.animation.update(delta);
@@ -52,11 +53,34 @@ fn updateVisuals(self: *Self) !void {
 }
 
 pub fn draw(self: *Self) void {
-    self.animation.draw(
-        self.movement.pos.subtract(.{
-            .x = @floatFromInt(@divFloor(self.animation.frame_width, 2)),
-            .y = @floatFromInt(@divFloor(self.animation.frame_height, 2)),
-        })
+    if (@import("builtin").mode == .Debug) {
+        debugDraw(self);
+    }
+    
+    self.animation.draw(self.movement.pos);
+}
+
+fn updateHitbox(self: *Self) void {
+    self.hitbox.x = self.movement.pos.x;
+    self.hitbox.y = self.movement.pos.y;
+}
+
+fn debugDraw(self: *Self) void {
+    const hitbox = self.hitbox;
+    if (false) rl.drawRectangle(
+        @intFromFloat(hitbox.x),
+        @intFromFloat(hitbox.y),
+        @intFromFloat(hitbox.width * settings.getResolutionRatio()),
+        @intFromFloat(hitbox.height * settings.getResolutionRatio()),
+        rl.Color.red
+    );
+
+    const pos = self.movement.pos;
+    if (false) rl.drawCircle(
+        @intFromFloat(pos.x),
+        @intFromFloat(pos.y),
+        5,
+        rl.Color.green
     );
 }
 

@@ -25,6 +25,7 @@ pub fn deinit(self: *Self, allocator: std.mem.Allocator) void {
 }
 
 pub fn draw(self: *Self, player_pos: Vector2) !void {
+
     const player_chunk = getChunkCoordFromPos(player_pos);
     const chunk_offsets: [9]ChunkCoordinates = .{
         .{.x = -1, .y = -1},
@@ -37,38 +38,41 @@ pub fn draw(self: *Self, player_pos: Vector2) !void {
         .{.x = 0, .y = 1},
         .{.x = 1, .y = 1},
     };
-    
+
     for (self.map_data.tile_map.layers) |layer| {
         for (chunk_offsets) |offset| {
             const current_chunk_coords = player_chunk.add(offset);
-            const chunk = layer.chunks.get(current_chunk_coords) orelse continue;
-            
-            for (0..chunk.tile_ids.len) |i| {
-                const column = @mod(i, settings.chunk_size);
-                const row = @mod(@divFloor(i, settings.chunk_size), settings.chunk_size);
-                const tile_pos_x = chunk.x + @as(i32, @intCast(column)) * settings.tile_size;
-                const tile_pos_y = chunk.y + @as(i32, @intCast(row)) * settings.tile_size;
+            const chunk = layer.chunks.get(current_chunk_coords)
+                orelse RuntimeMap.TileMap.TileLayer.TileChunk.getErrorChunk(current_chunk_coords);
 
+            for (0..chunk.tile_ids.len) |i| {
+                // offset id back by one to make transparent tiles use -1 (invalid tile id so it can be skipped)
                 const id = @as(i32, @intCast(chunk.tile_ids[i])) - 1;
 
-                const tile_rect =
+                const tile_source_rect =
                     if (id == -1) continue
                     else Rectangle.init(
-                        @floatFromInt(@mod(@as(i32, @intCast(id)) * settings.tile_size, @as(i32, self.texture.width))),
-                        @floatFromInt(@mod(@divFloor(@as(i32, @intCast(id)) * settings.tile_size, self.texture.width), self.texture.height)),
+                        @floatFromInt(@mod(id * settings.tile_size, self.texture.width)),
+                        @floatFromInt(@divFloor(id * settings.tile_size, self.texture.width) * settings.tile_size),
                         settings.tile_size,
                         settings.tile_size
                     );
 
+                // Column and row from the chunk
+                const chunk_column: i32 = @intCast(@mod(i, settings.chunk_size));
+                const chunk_row: i32 = @intCast(@divFloor(i, settings.chunk_size));
+
+                const tile_dest_rect = Rectangle.init(
+                    @as(f32, @floatFromInt(chunk.x * settings.tile_size + chunk_column * settings.tile_size)) * settings.getResolutionRatio(),
+                    @as(f32, @floatFromInt(chunk.y * settings.tile_size + chunk_row * settings.tile_size)) * settings.getResolutionRatio(),
+                    settings.tile_size * settings.getResolutionRatio(),
+                    settings.tile_size * settings.getResolutionRatio(),
+                );
+
                 rl.drawTexturePro(
                     self.texture,
-                    tile_rect,
-                    Rectangle.init(
-                        @as(f32, @floatFromInt(tile_pos_x)) * settings.getRsolutionRatio(),
-                        @as(f32, @floatFromInt(tile_pos_y)) * settings.getRsolutionRatio(),
-                        settings.tile_size * settings.getRsolutionRatio(),
-                        settings.tile_size * settings.getRsolutionRatio(),
-                    ),
+                    tile_source_rect,
+                    tile_dest_rect,
                     Vector2.zero(),
                     0,
                     rl.Color.white
@@ -80,8 +84,12 @@ pub fn draw(self: *Self, player_pos: Vector2) !void {
 
 /// Chunk coordinates are the position divided by the tile size and the chunk size.
 pub fn getChunkCoordFromPos(pos: Vector2) ChunkCoordinates {
-    const coord_pos = Coordinates.fromPosition(pos);
-    return coord_pos.divideScalar(settings.chunk_size);
+    const coordinate = Coordinates.fromPosition(
+        pos.divide(
+            Vector2.splat(settings.getResolutionRatio())
+        )
+    );
+    return coordinate.divideScalar(settings.chunk_size);
 }
 
 pub const Coordinates = CoordinatesDef();
@@ -158,17 +166,25 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
 
                 pub const TileChunk = struct {
                     tile_ids: []const u32,
-                    x: i32,
-                    y: i32,
+                    x: i32, // Coordinate not position
+                    y: i32, // Coordinate not position
                     
                     /// Chunk coordinates are the position divided by the tile size and the chunk size.
                     pub fn getChunkCoord(self: TileChunk) ChunkCoordinates {
-                        const coord_pos = ChunkCoordinates.divideScalar(
+                        return Coordinates.divideScalar(
                             .{.x = self.x, .y = self.y},
-                            settings.tile_size
-                        );
-                        return coord_pos.divideScalar(settings.chunk_size);
+                            settings.chunk_size);
                     }
+
+                    /// Returns an error chunk for the given chunk coordinates.
+                    /// It has every tile filled with an error texture.
+                    pub fn getErrorChunk(coords: ChunkCoordinates) TileChunk {
+                        return .{
+                            .x = coords.x * settings.chunk_size,
+                            .y = coords.y * settings.chunk_size,
+                            .tile_ids = &[_]u32{64} ** 1024,
+                        };
+                    }   
                 };
             };
         };

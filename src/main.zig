@@ -28,8 +28,8 @@ pub fn main() !void {
     var cam = rl.Camera2D{
         .target = cerby.movement.pos, 
         .offset = rl.Vector2{
-            .x = @as(f32, @floatFromInt(@divFloor(settings.window_width, 2))) - settings.tile_size * settings.getRsolutionRatio() / 2,
-            .y = @as(f32, @floatFromInt(@divFloor(settings.window_height, 2))) - settings.tile_size * settings.getRsolutionRatio() / 2,
+            .x = @as(f32, @floatFromInt(@divFloor(settings.window_width, 2))) - settings.tile_size * settings.getResolutionRatio() / 2,
+            .y = @as(f32, @floatFromInt(@divFloor(settings.window_height, 2))) - settings.tile_size * settings.getResolutionRatio() / 2,
         },
         .rotation = 0,
         .zoom = 1,
@@ -42,26 +42,28 @@ pub fn main() !void {
 
     while(!rl.windowShouldClose())
     {
-        if (rl.isKeyDown(.space)) rl.toggleFullscreen();
+        if (rl.isKeyDown(.f11)) rl.toggleFullscreen();
 
         // Logic
         try update_dispatcher.dispatch(std.math.clamp(rl.getFrameTime(), 0, 0.05));
         cam.target = cerby.movement.pos;
-        std.debug.print("{any}\n", .{cerby.movement.pos});
         // ===
         
         // Drawing
         rl.beginDrawing();
         defer rl.endDrawing();
+
         rl.beginMode2D(cam);
         defer rl.endMode2D();
+        
         rl.clearBackground(rl.Color.ray_white);
 
+        try map.draw(cerby.movement.pos);
+        cerby.draw();
         rl.drawFPS(
             @as(i32, @intFromFloat(cerby.movement.pos.x)) - 50,
             @as(i32, @intFromFloat(cerby.movement.pos.y)) - 50
         );
-        try map.draw(cerby.movement.pos);
-        cerby.draw();
+        // ===
     }
 }

@@ -51,15 +51,14 @@ pub const AnimationPlayer = struct {
     }
 
     pub fn draw(self: Self, pos: rl.Vector2) void {
-        // TODO Scale automatically based on difference between current and native resolution.
         rl.drawTexturePro(
             self.texture,
             self.frame_rect,
             Rectangle.init(
                 pos.x,
                 pos.y,
-                self.frame_rect.width * settings.getRsolutionRatio(),
-                self.frame_rect.height * settings.getRsolutionRatio()
+                self.frame_rect.width * settings.getResolutionRatio(),
+                self.frame_rect.height * settings.getResolutionRatio()
             ),
             Vector2.zero(),
             0,
@@ -92,12 +91,12 @@ pub const AnimationPlayer = struct {
 
     fn updateFrame(self: *Self) void {
         const columns = @divFloor(self.texture.width, self.frame_width);
-        const rows = @divFloor(self.texture.height, self.frame_height);
+        // const rows = @divFloor(self.texture.height, self.frame_height);
 
         const frame = self.animations[self.current_animation].start_frame + self.current_frame;
 
         const column = @mod(frame, columns);
-        const row = @mod(@divFloor(frame, columns), rows);
+        const row = @divFloor(frame, columns);
 
         self.frame_rect = Rectangle{
             .x = @floatFromInt(column * self.frame_width),
@@ -160,7 +159,7 @@ pub const Movement = struct {
     }
 
     pub fn move(self: *Self, input_vec: Vector2, delta: f32) void {
-        const s = self.speed * delta * settings.getRsolutionRatio();
+        const s = self.speed * delta * settings.getResolutionRatio();
         self.motion = input_vec.multiply(Vector2{.x = s, .y = s});
 
         self.pos = self.pos.add(self.motion);

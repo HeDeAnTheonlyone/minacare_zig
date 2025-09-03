@@ -1,9 +1,9 @@
 const std = @import("std");
 const rl = @import("raylib");
 const settings = @import("Settings.zig");
+const event = @import("event.zig");
 const TileMap = @import("TileMap.zig");
 const AnimationPlayer = @import("components.zig").AnimationPlayer;
-const dispatcher = @import("dispatcher.zig");
 const Character = @import("Character.zig");
 var debug_allocator = std.heap.DebugAllocator(.{}).init;
 
@@ -17,13 +17,17 @@ pub fn main() !void {
     defer rl.closeWindow();
     rl.setTargetFPS(settings.target_fps);
 
-    var update_dispatcher = dispatcher.CallbackDispatcher.init;
-
-    var map = try TileMap.init(gpa, "test");
-    defer map.deinit(gpa);
+    var update_dispatcher = event.Dispatcher(f32).init;
 
     var cerby = try Character.initTemplate(.Cerby);
     defer cerby.deinit();
+
+    var map = try TileMap.init(gpa, "test", cerby.movement.pos);
+    defer map.deinit(gpa);
+    try cerby.movement.pos_changed_event.add(.{
+        .func = TileMap.updateTileRenderCache,
+        .ctx = &map,
+    });
 
     var cam = rl.Camera2D{
         .target = cerby.movement.pos, 
@@ -36,7 +40,7 @@ pub fn main() !void {
     };
 
     try update_dispatcher.add(.{
-        .func = Character.updateCallbackAdapter,
+        .func = Character.update,
         .ctx = &cerby,
     });
 
@@ -45,7 +49,8 @@ pub fn main() !void {
         if (rl.isKeyDown(.f11)) rl.toggleFullscreen();
 
         // Logic
-        try update_dispatcher.dispatch(std.math.clamp(rl.getFrameTime(), 0, 0.05));
+        const delta = std.math.clamp(rl.getFrameTime(), 0, settings.frame_time_cap);
+        try update_dispatcher.dispatch(delta);
         cam.target = cerby.movement.pos;
         // ===
         
@@ -58,7 +63,7 @@ pub fn main() !void {
         
         rl.clearBackground(rl.Color.ray_white);
 
-        try map.draw(cerby.movement.pos);
+        map.draw();
         cerby.draw();
         rl.drawFPS(
             @as(i32, @intFromFloat(cerby.movement.pos.x)) - 50,

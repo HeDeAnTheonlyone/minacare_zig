@@ -7,16 +7,22 @@ const settings = @import("Settings.zig");
 /// Texture should be the same regardless what world map is loaded as all tiles should ideally be in the same file.
 texture: rl.Texture2D,
 map_data: RuntimeMap,
+/// 2 layers * 9 chunks * 32 tiles horizontal * 32 tiles vertical
+tile_render_cache: [2 * 9 * 32 * 32]TileDrawData = undefined,
+current_chunk: ChunkCoordinates,
 
 const Self = @This();
 const tile_spritesheet_path = "assets/textures/tile_spritesheet.png";
 
 /// Deinitialize with `deinit()`.
-pub fn init(allocator: std.mem.Allocator, map_name: []const u8) !Self {
-    return .{
+pub fn init(allocator: std.mem.Allocator, map_name: []const u8, initial_render_position: Vector2) !Self {
+    var  map = Self{
         .texture = try rl.loadTexture(tile_spritesheet_path),
         .map_data = try RuntimeMap.loadFromFile(allocator, map_name),
+        .current_chunk = getChunkCoordFromPos(initial_render_position).addValue(1),
     };
+    try Self.updateTileRenderCache(&map, initial_render_position);
+    return map;
 }
 
 pub fn deinit(self: *Self, allocator: std.mem.Allocator) void {
@@ -24,7 +30,11 @@ pub fn deinit(self: *Self, allocator: std.mem.Allocator) void {
     self.map_data.deinit(allocator);
 }
 
-pub fn draw(self: *Self, player_pos: Vector2) !void {
+pub fn updateTileRenderCache(self_: *anyopaque, player_pos: Vector2) !void {
+    const self: *Self = @alignCast(@ptrCast(self_));
+    
+    if (self.current_chunk.equals(getChunkCoordFromPos(player_pos))) return;
+    self.current_chunk = getChunkCoordFromPos(player_pos);
 
     const player_chunk = getChunkCoordFromPos(player_pos);
     const chunk_offsets: [9]ChunkCoordinates = .{
@@ -39,11 +49,14 @@ pub fn draw(self: *Self, player_pos: Vector2) !void {
         .{.x = 1, .y = 1},
     };
 
+    var index: usize = 0;
+
     for (self.map_data.tile_map.layers) |layer| {
         for (chunk_offsets) |offset| {
             const current_chunk_coords = player_chunk.add(offset);
             const chunk = layer.chunks.get(current_chunk_coords)
-                orelse RuntimeMap.TileMap.TileLayer.TileChunk.getErrorChunk(current_chunk_coords);
+                orelse if (@import("builtin").mode == .Debug) RuntimeMap.TileMap.TileLayer.TileChunk.getErrorChunk(current_chunk_coords)
+                    else continue;
 
             for (0..chunk.tile_ids.len) |i| {
                 // offset id back by one to make transparent tiles use -1 (invalid tile id so it can be skipped)
@@ -69,16 +82,26 @@ pub fn draw(self: *Self, player_pos: Vector2) !void {
                     settings.tile_size * settings.getResolutionRatio(),
                 );
 
-                rl.drawTexturePro(
-                    self.texture,
-                    tile_source_rect,
-                    tile_dest_rect,
-                    Vector2.zero(),
-                    0,
-                    rl.Color.white
-                );
+                self.tile_render_cache[index] = .{
+                    .source_rect = tile_source_rect,
+                    .dest_rect = tile_dest_rect,
+                };
+                index += 1;
             }
         }
+    }
+}
+
+pub fn draw(self: *Self) void {
+    for (self.tile_render_cache) |draw_data| {
+        rl.drawTexturePro(
+            self.texture,
+            draw_data.source_rect,
+            draw_data.dest_rect,
+            Vector2.zero(),
+            0,
+            rl.Color.white
+        );
     }
 }
 
@@ -91,6 +114,11 @@ pub fn getChunkCoordFromPos(pos: Vector2) ChunkCoordinates {
     );
     return coordinate.divideScalar(settings.chunk_size);
 }
+
+const TileDrawData = struct {
+    source_rect: Rectangle,
+    dest_rect: Rectangle,
+};
 
 pub const Coordinates = CoordinatesDef();
 pub const ChunkCoordinates = CoordinatesDef();
@@ -113,10 +141,28 @@ pub fn CoordinatesDef() type {
             );
         }
 
+        pub fn splat(scalar: i32) SelfCoords {
+            return .{
+                .x = scalar,
+                .y = scalar,
+            };
+        }
+
+        pub fn equals(self: SelfCoords, other: SelfCoords) bool {
+            return self.x == other.x and self.y == other.y;
+        }
+
         pub fn add(self: SelfCoords, addend: SelfCoords) SelfCoords {
             return .{
                 .x = self.x + addend.x,
                 .y = self.y + addend.y,
+            };
+        }
+
+        pub fn addValue(self: SelfCoords, scalar: i32) SelfCoords {
+            return .{
+                .x = self.x + scalar,
+                .y = self.y + scalar,
             };
         }
 
@@ -242,6 +288,7 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
                 .{}
             );
 
+            // Map stored map data to RuntimeMap struct
             const runtime_map = RuntimeMap{
                 .tile_map = .{
                     .layers = blk: {

@@ -1,7 +1,7 @@
 const std = @import("std");
 const rl = @import("raylib");
 const settings = @import("Settings.zig");
-const unpackParam = @import("signals.zig").CallbackCaster.unpackParam;
+const event = @import("event.zig");
 const components = @import("components.zig");
 const AnimationPlayer = components.AnimationPlayer;
 const Movement = components.Movement;
@@ -28,20 +28,15 @@ pub fn deinit(self: *Self) void {
     self.animation.deinit();
 }
 
-pub fn updateCallbackAdapter(ctx: *anyopaque, param: ?usize) !void {
-    const self: *Self = @alignCast(@ptrCast(ctx));
-    const delta = unpackParam(f32, param.?);
+pub fn update(self_: *anyopaque, delta: f32) !void {
+    const self: *Self = @alignCast(@ptrCast(self_));
 
-    try update(self, delta);
-}
-
-fn update(self: *Self, delta: f32) !void {
     const vec = input.getInputVector();
     //TODO make update collision and movement so that movement can be canceled if it would end up in a collision shape
     self.updateHitbox();
-    self.movement.move(vec, delta);
+    try self.movement.move(vec, delta);
     try self.updateVisuals();
-    self.animation.update(delta);
+    AnimationPlayer.update(&self.animation, delta);
 }
 
 fn updateVisuals(self: *Self) !void {
@@ -101,9 +96,13 @@ pub fn initTemplate(template: Template) !Self {
                     16,
                     7
                 ),
-                .{
-                    .speed = 100,
-                },
+                Movement.init(
+                    .{
+                        .x = 0,
+                        .y = -240
+                    },
+                    100,
+                ),
             );
 
             // Standing
@@ -123,7 +122,10 @@ pub fn initTemplate(template: Template) !Self {
                     16,
                     5
                 ),
-                Movement.init(40),
+                Movement.init(
+                    Vector2.zero(),
+                    40,
+                ),
             );
 
             // Standing

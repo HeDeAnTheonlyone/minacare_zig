@@ -1,7 +1,7 @@
 const std = @import("std");
 const rl = @import("raylib");
 const settings = @import("Settings.zig"); 
-const unpackParam = @import("signals.zig").CallbackCaster.packParam;
+const event = @import("event.zig");
 const Rectangle = rl.Rectangle;
 const Vector2 = rl.Vector2;
 
@@ -65,17 +65,10 @@ pub const AnimationPlayer = struct {
             rl.Color.white);
     }
 
-    /// Adapter for the update function to work in a callback
-    /// Requires `self: *AnimationPlayer` and `delta: f32`
-    pub fn updateCallbackAdapter(ctx: *anyopaque, param: ?usize) DummyError!void {
-        const self: *AnimationPlayer = @ptrCast(@alignCast(ctx));
-        const delta: f32 = unpackParam(f32, param.?);
-
-        update(self, delta);
-    }
-
     /// The main update function that handles the whole process of this object 
-    pub fn update(self: *Self, delta: f32) void {
+    pub fn update(self_: *anyopaque, delta: f32) void {
+        const self: *Self = @alignCast(@ptrCast(self_));
+
         updateFrameTime(self, delta);
     }
 
@@ -148,21 +141,26 @@ pub const AnimationPlayer = struct {
 };
 
 pub const Movement = struct {
-    pos: Vector2 = .{.x = 0, .y = 0},
-    motion: Vector2 = .{.x = 0, .y = 0},
+    pos: Vector2,
+    motion: Vector2 = Vector2.splat(0),
     speed: f32,
+    pos_changed_event: event.Dispatcher(Vector2) = .init,
 
     const Self = @This();
 
-    pub fn init(speed: f32) Self {
-        return .{ .speed = speed };
+    pub fn init(pos: Vector2, speed: f32) Self {
+        return .{
+            .pos = pos,
+            .speed = speed,
+        };
     }
 
-    pub fn move(self: *Self, input_vec: Vector2, delta: f32) void {
+    pub fn move(self: *Self, input_vec: Vector2, delta: f32) !void {
         const s = self.speed * delta * settings.getResolutionRatio();
-        self.motion = input_vec.multiply(Vector2{.x = s, .y = s});
-
-        self.pos = self.pos.add(self.motion);
+        self.motion = input_vec.multiply(Vector2.splat(s));
+        const new_pos = self.pos.add(self.motion);
+        if (new_pos.equals(self.pos) == 0) try self.pos_changed_event.dispatch(self.pos);
+        self.pos = new_pos;
     }
 
     // pub fn smooth_in_out_move(self: *Self, target_pos: Vector2, delta: f32) void {

@@ -5,6 +5,7 @@ const event = @import("event.zig");
 const TileMap = @import("TileMap.zig");
 const AnimationPlayer = @import("components.zig").AnimationPlayer;
 const Character = @import("Character.zig");
+const components = @import("components.zig");
 var debug_allocator = std.heap.DebugAllocator(.{}).init;
 
 pub fn main() !void {
@@ -19,14 +20,21 @@ pub fn main() !void {
 
     var update_dispatcher = event.Dispatcher(f32).init;
 
-    var cerby = try Character.initTemplate(.Cerby);
+    const spawn_pos = rl.Vector2{.x = 0, .y = -40};
+
+    var map = try TileMap.init(gpa, "test", spawn_pos);
+    defer map.deinit(gpa);
+
+    var cerby = try Character.initTemplate(.Cerby, &map.map_data.collision_map, spawn_pos);
     defer cerby.deinit();
 
-    var map = try TileMap.init(gpa, "test", cerby.movement.pos);
-    defer map.deinit(gpa);
     try cerby.movement.pos_changed_event.add(.{
         .func = TileMap.updateTileRenderCache,
         .ctx = &map,
+    });
+    try cerby.movement.pos_changed_event.add(.{
+        .func = components.Collider.moveHitbox,
+        .ctx = &cerby.collider,
     });
 
     var cam = rl.Camera2D{

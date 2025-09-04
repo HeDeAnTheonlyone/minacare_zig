@@ -3,47 +3,53 @@ const rl = @import("raylib");
 const settings = @import("Settings.zig");
 const event = @import("event.zig");
 const components = @import("components.zig");
+const TileMap = @import("TileMap.zig");
+const Coordinates = TileMap.Coordinates;
 const AnimationPlayer = components.AnimationPlayer;
 const Movement = components.Movement;
+const Collider = components.Collider;
 const input = components.input;
 const Rectangle = rl.Rectangle;
 const Vector2 = rl.Vector2;
 
 animation: AnimationPlayer,
 movement: Movement,
-hitbox: Rectangle,
+collider: Collider,
 
 const Self = @This();
 
 /// Deinitialize with `deinit()`
-fn init(animation: AnimationPlayer, movement: Movement) Self {
+fn init(animation: AnimationPlayer, movement: Movement, collider: Collider) !Self {
     return .{
         .animation = animation,
         .movement = movement,
-        .hitbox = animation.getFrameRect(),
+        // TODO think of a more dynamic and flexible way for collider hitbox
+        .collider = collider,
     };
 }
 
 pub fn deinit(self: *Self) void {
+    self.movement.pos_changed_event.remove(.{
+        .func = Collider.moveHitbox,
+        .ctx = &self.collider,
+    });
     self.animation.deinit();
 }
 
 pub fn update(self_: *anyopaque, delta: f32) !void {
     const self: *Self = @alignCast(@ptrCast(self_));
 
-    const vec = input.getInputVector();
-    //TODO make update collision and movement so that movement can be canceled if it would end up in a collision shape
-    self.updateHitbox();
-    try self.movement.move(vec, delta);
+    try self.moveAndCollide(delta);
     try self.updateVisuals();
     AnimationPlayer.update(&self.animation, delta);
 }
 
 fn updateVisuals(self: *Self) !void {
-    if (self.movement.motion.x < 0) self.animation.h_flip = false
-    else if (self.movement.motion.x > 0) self.animation.h_flip = true;
+    const input_vec = input.getInputVector();
+    if (input_vec.x < 0) self.animation.h_flip = false
+    else if (input_vec .x > 0) self.animation.h_flip = true;
 
-    if (self.movement.motion.length() == 0) try self.animation.setAnimation(0)
+    if (input_vec.length() == 0) try self.animation.setAnimation(0)
     else try self.animation.setAnimation(1);
 }
 
@@ -55,28 +61,42 @@ pub fn draw(self: *Self) void {
     self.animation.draw(self.movement.pos);
 }
 
-fn updateHitbox(self: *Self) void {
-    self.hitbox.x = self.movement.pos.x;
-    self.hitbox.y = self.movement.pos.y;
+fn debugDraw(self: *Self) void {
+    if (settings.debug) {
+        const hitbox = self.collider.hitbox;
+        rl.drawRectangleLinesEx(
+            Rectangle.init(
+                hitbox.x,
+                hitbox.y,
+                hitbox.width * settings.getResolutionRatio(),
+                hitbox.height * settings.getResolutionRatio(),
+            ),
+            5,
+            rl.Color.red
+        );
+    }
+
+    if (settings.debug) {
+        const pos = self.movement.pos;
+        rl.drawCircle(
+            @intFromFloat(pos.x),
+            @intFromFloat(pos.y),
+            5,
+            rl.Color.green
+        );
+    }
 }
 
-fn debugDraw(self: *Self) void {
-    const hitbox = self.hitbox;
-    if (false) rl.drawRectangle(
-        @intFromFloat(hitbox.x),
-        @intFromFloat(hitbox.y),
-        @intFromFloat(hitbox.width * settings.getResolutionRatio()),
-        @intFromFloat(hitbox.height * settings.getResolutionRatio()),
-        rl.Color.red
-    );
 
-    const pos = self.movement.pos;
-    if (false) rl.drawCircle(
-        @intFromFloat(pos.x),
-        @intFromFloat(pos.y),
-        5,
-        rl.Color.green
-    );
+//TODO Change back to old move function and just restore old position if collision occured. Connect and trigger via position_changed_event.
+fn moveAndCollide(self: *Self, delta: f32) !void {
+    const input_vec = input.getInputVector();
+    if (input_vec.equals(Vector2.zero()) != 0) return;
+
+    const next_pos = self.movement.getNextPos(input_vec, delta);
+    const is_colliding = self.collider.checkCollisionAtPos(next_pos.scale(1 / settings.getResolutionRatio()));
+    if (is_colliding) return;
+    try self.movement.move(next_pos);
 }
 
 const Template = enum {
@@ -85,24 +105,31 @@ const Template = enum {
 };
 
 /// Init a new character with the given template. Deinitialize with `deinit()`.
-pub fn initTemplate(template: Template) !Self {
+pub fn initTemplate(template: Template, current_map: *TileMap.RuntimeMap.CollisionMap, spawn_pos: Vector2) !Self {
     return switch (template) {
         .Cerby => blk: {
             const tex = try rl.loadTexture("assets/textures/characters_spritesheet.png");
-            var obj = Self.init(
-                AnimationPlayer.init(
-                    tex,
-                    16,
-                    16,
-                    7
-                ),
-                Movement.init(
-                    .{
-                        .x = 0,
-                        .y = -240
-                    },
-                    100,
-                ),
+            const animation = AnimationPlayer.init(
+                tex,
+                16,
+                16,
+                7
+            );
+
+            const movement = Movement.init(
+                spawn_pos,
+                100,
+            );
+            
+            const collider = Collider{
+                .hitbox = animation.getFrameRect(),
+                .current_map = current_map,
+            };
+
+            var obj = try Self.init(
+                animation,
+                movement,
+                collider,
             );
 
             // Standing
@@ -115,17 +142,27 @@ pub fn initTemplate(template: Template) !Self {
         },
         .BlueMinawan => blk: {
             const tex = try rl.loadTexture("assets/textures/characters_spritesheet.png");
-            var obj = Self.init(
-                AnimationPlayer.init(
-                    tex,
-                    16,
-                    16,
-                    5
-                ),
-                Movement.init(
-                    Vector2.zero(),
-                    40,
-                ),
+            const animation = AnimationPlayer.init(
+                tex,
+                16,
+                16,
+                7
+            );
+
+            const movement = Movement.init(
+                spawn_pos,
+                40,
+            );
+            
+            const collider = Collider{
+                .hitbox = animation.getFrameRect(),
+                .current_map = current_map,
+            };
+
+            var obj = try Self.init(
+                animation,
+                movement,
+                collider,
             );
 
             // Standing

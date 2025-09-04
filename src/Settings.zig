@@ -8,6 +8,8 @@ pub const tile_size: u8 = 16; // this number squared
 pub const chunk_size: u8 = 32; // this number squared
 pub const frame_time_cap: f32 = 0.05;
 
+pub const debug = true;
+
 pub fn getResolutionRatio() f32 {
     // The compensation value is to make slightly change the final multiplier to make the look right.
     const compensation: f32 = 1.5; 

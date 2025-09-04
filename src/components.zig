@@ -2,6 +2,7 @@ const std = @import("std");
 const rl = @import("raylib");
 const settings = @import("Settings.zig"); 
 const event = @import("event.zig");
+const TileMap = @import("TileMap.zig");
 const Rectangle = rl.Rectangle;
 const Vector2 = rl.Vector2;
 
@@ -155,13 +156,24 @@ pub const Movement = struct {
         };
     }
 
-    pub fn move(self: *Self, input_vec: Vector2, delta: f32) !void {
+    pub fn getNextPos(self: *Self, input_vec: Vector2, delta: f32) Vector2 {
         const s = self.speed * delta * settings.getResolutionRatio();
         self.motion = input_vec.multiply(Vector2.splat(s));
-        const new_pos = self.pos.add(self.motion);
-        if (new_pos.equals(self.pos) == 0) try self.pos_changed_event.dispatch(self.pos);
-        self.pos = new_pos;
+        return self.pos.add(self.motion);
     }
+
+    pub fn move(self: *Self, target_pos: Vector2, ) !void {
+        try self.pos_changed_event.dispatch(target_pos);
+        self.pos = target_pos;
+    }
+
+    /// Returns the position without the screen size compensation applied.
+    pub fn getNativePos(self: *Self) Vector2 {
+        return self.pos.scale(1 / settings.getResolutionRatio());
+    }
+
+    //TODO get center function
+    // pub fn getCenter()
 
     // pub fn smooth_in_out_move(self: *Self, target_pos: Vector2, delta: f32) void {
     //     self.motion = Vector2.subtract(target_pos, self.pos);
@@ -194,6 +206,61 @@ pub const input = struct {
     }
 };
 
-pub const Collision = struct {
-    //TODO
+pub const Collider = struct {
+    hitbox: Rectangle,
+    // TODO abstract current_map later for multiple collision sources (ex.: entities)
+    current_map: *TileMap.RuntimeMap.CollisionMap,
+    // TODO make cache only work for collision map when other collisions sources get added
+    last_coordinates: TileMap.Coordinates = undefined,
+    last_collision_check: bool = undefined,
+
+    const Self = @This();
+
+    /// Checks in a 3x3 tile field around the player for collisions.
+    /// Original position is needed without the screen size compensation applied.
+    /// Returns true if collision occured, otherwise, false.
+    pub fn checkCollisionAtPos(self: *Self, pos: Vector2) bool {
+        const coords = TileMap.Coordinates.fromPosition(pos);
+        if (coords.equals(self.last_coordinates)) return self.last_collision_check;
+        self.last_coordinates = coords;
+        
+        const coord_offset: [9]TileMap.Coordinates = .{
+            .{.x = -1, .y = -1},
+            .{.x = 0, .y = -1},
+            .{.x = 1, .y = -1},
+            .{.x = -1, .y = 0},
+            .{.x = 0, .y = 0},
+            .{.x = 1, .y = 0},
+            .{.x = -1, .y = 1},
+            .{.x = 0, .y = 1},
+            .{.x = 1, .y = 1},
+        };
+
+        const backup_x, const backup_y = .{self.hitbox.x, self.hitbox.y};
+        defer self.hitbox.x, self.hitbox.y = .{backup_x, backup_y};
+        try moveHitbox(self, pos);
+
+        var is_colliding = false;
+        for (coord_offset) |offset| {
+            const offset_coords = coords.add(offset);
+            const collision_shape = self.current_map.collision_shapes.get(offset_coords) orelse continue;
+            is_colliding = is_colliding or self.isColliding(collision_shape);
+        }
+        
+        self.last_collision_check = is_colliding;
+        return is_colliding;
+    }
+
+    pub fn isColliding(self: *Self, collision_shape: Rectangle) bool {
+        return self.hitbox.checkCollision(collision_shape);
+    }
+
+    pub fn moveHitbox(self_: *anyopaque, new_position: Vector2) DummyError!void {
+        const self: *Self = @alignCast(@ptrCast(self_));
+
+        std.debug.print("### MOVE HITBOX ###\n", .{});
+
+        self.hitbox.x = new_position.x;
+        self.hitbox.y = new_position.y;
+    }
 };

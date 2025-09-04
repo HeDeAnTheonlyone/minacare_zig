@@ -30,6 +30,23 @@ pub fn deinit(self: *Self, allocator: std.mem.Allocator) void {
     self.map_data.deinit(allocator);
 }
 
+pub fn draw(self: *Self) void {
+    for (self.tile_render_cache) |draw_data| {
+        rl.drawTexturePro(
+            self.texture,
+            draw_data.source_rect,
+            draw_data.dest_rect,
+            Vector2.zero(),
+            0,
+            rl.Color.white
+        );
+    }
+
+    if (@import("builtin").mode == .Debug) {
+        self.debugDraw();
+    }
+}
+
 pub fn updateTileRenderCache(self_: *anyopaque, player_pos: Vector2) !void {
     const self: *Self = @alignCast(@ptrCast(self_));
     
@@ -92,17 +109,28 @@ pub fn updateTileRenderCache(self_: *anyopaque, player_pos: Vector2) !void {
     }
 }
 
-pub fn draw(self: *Self) void {
-    for (self.tile_render_cache) |draw_data| {
-        rl.drawTexturePro(
-            self.texture,
-            draw_data.source_rect,
-            draw_data.dest_rect,
-            Vector2.zero(),
-            0,
-            rl.Color.white
-        );
+fn debugDraw(self: *Self) void {
+    if(settings.debug) {
+        var iter = self.map_data.collision_map.collision_shapes.iterator();
+        while (iter.next()) |collision_shape| {
+            const v = collision_shape.value_ptr;
+            rl.drawRectangleLinesEx(
+                Rectangle.init(
+                    v.x * settings.getResolutionRatio(),
+                    v.y * settings.getResolutionRatio(),
+                    v.width * settings.getResolutionRatio(),
+                    v.height * settings.getResolutionRatio(),
+                ),
+                5,
+                rl.Color.blue
+            );
+        }
     }
+}
+
+pub fn getTileCollision(self: *Self, player_pos: Vector2) ?Rectangle {
+    const coords = Coordinates.fromPosition(player_pos);
+    return self.map_data.collision_map.collision_shapes.get(coords);
 }
 
 /// Chunk coordinates are the position divided by the tile size and the chunk size.

@@ -1,34 +1,34 @@
 const std = @import("std");
 
-pub fn CallbackFn(param_type: type) type {
+pub fn CallbackFn(comptime param_type: type) type {
     return *const fn(ctx: *anyopaque, param: param_type) anyerror!void;
 }
     
-pub fn Callback(param_type: type) type {
+pub fn Callback(comptime param_type: type) type {
     return struct {
         func: CallbackFn(param_type),
         ctx: *anyopaque,
 
         const Self = @This();
 
-        pub fn call(self: *const Self, param: param_type) !void {
+        pub fn invoke(self: *const Self, param: param_type) !void {
             try self.func(self.ctx, param);
         }
     };
 }
 
-pub fn Dispatcher(param_type: type) type {
+pub fn Dispatcher(comptime param_type: type) type {
     return struct {
         callback_list: [max_callbacks]Callback(param_type),
         callback_count: u8,
 
         const Self = @This();
-        pub const init = Self{.callback_list = undefined, .callback_count = 0};
         const max_callbacks = 255;
+        pub const init = Self{.callback_list = undefined, .callback_count = 0};
 
         pub fn dispatch(self: *Self, param: param_type) anyerror!void {
             for (0..self.callback_count) |i| {
-                try self.callback_list[i].call(param);
+                try self.callback_list[i].invoke(param);
             }
         }
 

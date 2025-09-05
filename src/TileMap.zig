@@ -93,10 +93,10 @@ pub fn updateTileRenderCache(self_: *anyopaque, player_pos: Vector2) !void {
                 const chunk_row: i32 = @intCast(@divFloor(i, settings.chunk_size));
 
                 const tile_dest_rect = Rectangle.init(
-                    @as(f32, @floatFromInt(chunk.x * settings.tile_size + chunk_column * settings.tile_size)) * settings.getResolutionRatio(),
-                    @as(f32, @floatFromInt(chunk.y * settings.tile_size + chunk_row * settings.tile_size)) * settings.getResolutionRatio(),
-                    settings.tile_size * settings.getResolutionRatio(),
-                    settings.tile_size * settings.getResolutionRatio(),
+                    @as(f32, @floatFromInt(chunk.x * settings.tile_size + chunk_column * settings.tile_size)) * settings.resolution_ratio,
+                    @as(f32, @floatFromInt(chunk.y * settings.tile_size + chunk_row * settings.tile_size)) * settings.resolution_ratio,
+                    settings.tile_size * settings.resolution_ratio,
+                    settings.tile_size * settings.resolution_ratio,
                 );
 
                 self.tile_render_cache[index] = .{
@@ -116,10 +116,10 @@ fn debugDraw(self: *Self) void {
             const v = collision_shape.value_ptr;
             rl.drawRectangleLinesEx(
                 Rectangle.init(
-                    v.x * settings.getResolutionRatio(),
-                    v.y * settings.getResolutionRatio(),
-                    v.width * settings.getResolutionRatio(),
-                    v.height * settings.getResolutionRatio(),
+                    v.x * settings.resolution_ratio,
+                    v.y * settings.resolution_ratio,
+                    v.width * settings.resolution_ratio,
+                    v.height * settings.resolution_ratio,
                 ),
                 5,
                 rl.Color.blue

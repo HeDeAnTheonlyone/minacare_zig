@@ -56,10 +56,10 @@ pub const AnimationPlayer = struct {
             self.texture,
             self.frame_rect,
             Rectangle.init(
-                pos.x * settings.getResolutionRatio(),
-                pos.y * settings.getResolutionRatio(),
-                self.frame_rect.width * settings.getResolutionRatio(),
-                self.frame_rect.height * settings.getResolutionRatio()
+                pos.x * settings.resolution_ratio,
+                pos.y * settings.resolution_ratio,
+                self.frame_rect.width * settings.resolution_ratio,
+                self.frame_rect.height * settings.resolution_ratio
             ),
             Vector2.zero(),
             0,
@@ -78,7 +78,8 @@ pub const AnimationPlayer = struct {
         if (self.paused) return;
         if (self.frame_time < 1) return;
 
-        self.sub_frame_counter += 60 * delta;
+        const base_framerate = 60;
+        self.sub_frame_counter += base_framerate * delta;
         if (self.sub_frame_counter < self.frame_time) return;
         self.sub_frame_counter = 0;
         
@@ -178,7 +179,7 @@ pub const Movement = struct {
 
     // Returns the position without the screen size compensation applied.
     // pub fn getNativePos(self: *Self) Vector2 {
-    //     return self.pos.scale(1 / settings.getResolutionRatio());
+    //     return self.pos.scale(1 / settings.resolution_ratio);
     // }
 
     // pub fn smooth_in_out_move(self: *Self, target_pos: Vector2, delta: f32) void {

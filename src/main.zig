@@ -9,6 +9,8 @@ const components = @import("components.zig");
 var debug_allocator = std.heap.DebugAllocator(.{}).init;
 
 pub fn main() !void {
+    settings.init();
+
     const gpa = switch (@import("builtin").mode) {
         .Debug => debug_allocator.allocator(),
         else => std.heap.smp_allocator,
@@ -63,7 +65,7 @@ pub fn main() !void {
         // Logic
         const delta = std.math.clamp(rl.getFrameTime(), 0, settings.frame_time_cap);
         try update_dispatcher.dispatch(delta);
-        cam.target = cerby.movement.pos.scale(settings.getResolutionRatio());
+        cam.target = cerby.movement.pos.scale(settings.resolution_ratio);
         // ===
         
         // Drawing

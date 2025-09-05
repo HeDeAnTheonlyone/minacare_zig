@@ -66,10 +66,10 @@ fn debugDraw(self: *Self) void {
         const hitbox = self.collider.hitbox;
         rl.drawRectangleLinesEx(
             Rectangle.init(
-                hitbox.x * settings.getResolutionRatio(),
-                hitbox.y * settings.getResolutionRatio(),
-                hitbox.width * settings.getResolutionRatio(),
-                hitbox.height * settings.getResolutionRatio(),
+                hitbox.x * settings.resolution_ratio,
+                hitbox.y * settings.resolution_ratio,
+                hitbox.width * settings.resolution_ratio,
+                hitbox.height * settings.resolution_ratio,
             ),
             5,
             rl.Color.red
@@ -79,8 +79,8 @@ fn debugDraw(self: *Self) void {
     if (settings.debug) {
         const pos = self.movement.pos;
         rl.drawCircle(
-            @intFromFloat(pos.x * settings.getResolutionRatio()),
-            @intFromFloat(pos.y * settings.getResolutionRatio()),
+            @intFromFloat(pos.x * settings.resolution_ratio),
+            @intFromFloat(pos.y * settings.resolution_ratio),
             5,
             rl.Color.green
         );
@@ -91,7 +91,7 @@ fn debugDraw(self: *Self) void {
 // fn getCenter(self: *Self) Vector2 {
 //     const center_offset = self.animation.getCenter();
 //     return center_offset
-//         .scale(settings.getResolutionRatio())
+//         .scale(settings.resolution_ratio)
 //         .
 // }
 

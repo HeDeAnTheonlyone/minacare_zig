@@ -56,8 +56,8 @@ pub const AnimationPlayer = struct {
             self.texture,
             self.frame_rect,
             Rectangle.init(
-                pos.x,
-                pos.y,
+                pos.x * settings.getResolutionRatio(),
+                pos.y * settings.getResolutionRatio(),
                 self.frame_rect.width * settings.getResolutionRatio(),
                 self.frame_rect.height * settings.getResolutionRatio()
             ),
@@ -77,16 +77,16 @@ pub const AnimationPlayer = struct {
         if (self.animations[self.current_animation].getFramesCount() == 1) return;
         if (self.paused) return;
         if (self.frame_time < 1) return;
+
         self.sub_frame_counter += 60 * delta;
         if (self.sub_frame_counter < self.frame_time) return;
         self.sub_frame_counter = 0;
+        
         updateFrame(self);
     }
 
     fn updateFrame(self: *Self) void {
         const columns = @divFloor(self.texture.width, self.frame_width);
-        // const rows = @divFloor(self.texture.height, self.frame_height);
-
         const frame = self.animations[self.current_animation].start_frame + self.current_frame;
 
         const column = @mod(frame, columns);
@@ -139,6 +139,15 @@ pub const AnimationPlayer = struct {
             @floatFromInt(self.frame_height),
         );
     }
+
+    // Retuns the center in the current frame, not the world position.
+    pub fn getCenter(self: *Self) Vector2 {
+        // TODO update for multi tile objects
+        return .{
+            .x = @floatFromInt(@divFloor(self.frame_width, 2)),
+            .y = @floatFromInt(@divFloor(self.frame_height, 2)),
+        };
+    }
 };
 
 pub const Movement = struct {
@@ -157,8 +166,8 @@ pub const Movement = struct {
     }
 
     pub fn getNextPos(self: *Self, input_vec: Vector2, delta: f32) Vector2 {
-        const s = self.speed * delta * settings.getResolutionRatio();
-        self.motion = input_vec.multiply(Vector2.splat(s));
+        const s = self.speed * delta;
+        self.motion = input_vec.scale(s);
         return self.pos.add(self.motion);
     }
 
@@ -167,13 +176,10 @@ pub const Movement = struct {
         self.pos = target_pos;
     }
 
-    /// Returns the position without the screen size compensation applied.
-    pub fn getNativePos(self: *Self) Vector2 {
-        return self.pos.scale(1 / settings.getResolutionRatio());
-    }
-
-    //TODO get center function
-    // pub fn getCenter()
+    // Returns the position without the screen size compensation applied.
+    // pub fn getNativePos(self: *Self) Vector2 {
+    //     return self.pos.scale(1 / settings.getResolutionRatio());
+    // }
 
     // pub fn smooth_in_out_move(self: *Self, target_pos: Vector2, delta: f32) void {
     //     self.motion = Vector2.subtract(target_pos, self.pos);
@@ -217,7 +223,6 @@ pub const Collider = struct {
     const Self = @This();
 
     /// Checks in a 3x3 tile field around the player for collisions.
-    /// Original position is needed without the screen size compensation applied.
     /// Returns true if collision occured, otherwise, false.
     pub fn checkCollisionAtPos(self: *Self, pos: Vector2) bool {
         const coords = TileMap.Coordinates.fromPosition(pos);
@@ -255,12 +260,10 @@ pub const Collider = struct {
         return self.hitbox.checkCollision(collision_shape);
     }
 
-    pub fn moveHitbox(self_: *anyopaque, new_position: Vector2) DummyError!void {
+    pub fn moveHitbox(self_: *anyopaque, pos: Vector2) DummyError!void {
         const self: *Self = @alignCast(@ptrCast(self_));
 
-        std.debug.print("### MOVE HITBOX ###\n", .{});
-
-        self.hitbox.x = new_position.x;
-        self.hitbox.y = new_position.y;
+        self.hitbox.x = pos.x;
+        self.hitbox.y = pos.y;
     }
 };

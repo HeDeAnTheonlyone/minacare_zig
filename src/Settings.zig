@@ -10,6 +10,8 @@ pub const frame_time_cap: f32 = 0.05;
 
 pub const debug = true;
 
+///  Returns a multiplier to scale movement/drawing/etc.. based on the screen size.
+/// Only use this value in display/drawing context.
 pub fn getResolutionRatio() f32 {
     // The compensation value is to make slightly change the final multiplier to make the look right.
     const compensation: f32 = 1.5; 

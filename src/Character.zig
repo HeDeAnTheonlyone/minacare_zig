@@ -66,8 +66,8 @@ fn debugDraw(self: *Self) void {
         const hitbox = self.collider.hitbox;
         rl.drawRectangleLinesEx(
             Rectangle.init(
-                hitbox.x,
-                hitbox.y,
+                hitbox.x * settings.getResolutionRatio(),
+                hitbox.y * settings.getResolutionRatio(),
                 hitbox.width * settings.getResolutionRatio(),
                 hitbox.height * settings.getResolutionRatio(),
             ),
@@ -79,22 +79,28 @@ fn debugDraw(self: *Self) void {
     if (settings.debug) {
         const pos = self.movement.pos;
         rl.drawCircle(
-            @intFromFloat(pos.x),
-            @intFromFloat(pos.y),
+            @intFromFloat(pos.x * settings.getResolutionRatio()),
+            @intFromFloat(pos.y * settings.getResolutionRatio()),
             5,
             rl.Color.green
         );
     }
 }
 
+// /// Returns the position of the center point
+// fn getCenter(self: *Self) Vector2 {
+//     const center_offset = self.animation.getCenter();
+//     return center_offset
+//         .scale(settings.getResolutionRatio())
+//         .
+// }
 
-//TODO Change back to old move function and just restore old position if collision occured. Connect and trigger via position_changed_event.
 fn moveAndCollide(self: *Self, delta: f32) !void {
     const input_vec = input.getInputVector();
     if (input_vec.equals(Vector2.zero()) != 0) return;
 
     const next_pos = self.movement.getNextPos(input_vec, delta);
-    const is_colliding = self.collider.checkCollisionAtPos(next_pos.scale(1 / settings.getResolutionRatio()));
+    const is_colliding = self.collider.checkCollisionAtPos(next_pos);
     if (is_colliding) return;
     try self.movement.move(next_pos);
 }
@@ -107,7 +113,7 @@ const Template = enum {
 /// Init a new character with the given template. Deinitialize with `deinit()`.
 pub fn initTemplate(template: Template, current_map: *TileMap.RuntimeMap.CollisionMap, spawn_pos: Vector2) !Self {
     return switch (template) {
-        .Cerby => blk: {
+        .Cerby => blk: {           
             const tex = try rl.loadTexture("assets/textures/characters_spritesheet.png");
             const animation = AnimationPlayer.init(
                 tex,

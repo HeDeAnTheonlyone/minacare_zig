@@ -134,12 +134,8 @@ pub fn getTileCollision(self: *Self, player_pos: Vector2) ?Rectangle {
 }
 
 /// Chunk coordinates are the position divided by the tile size and the chunk size.
-pub fn getChunkCoordFromPos(pos: Vector2) ChunkCoordinates {
-    const coordinate = Coordinates.fromPosition(
-        pos.divide(
-            Vector2.splat(settings.getResolutionRatio())
-        )
-    );
+pub fn getChunkCoordFromPos(native_pos: Vector2) ChunkCoordinates {
+    const coordinate = Coordinates.fromPosition(native_pos);
     return coordinate.divideScalar(settings.chunk_size);
 }
 

@@ -141,7 +141,7 @@ pub const AnimationPlayer = struct {
         );
     }
 
-    // Retuns the center in the current frame, not the world position.
+    /// Retuns the center in pixels in the current frame, not the world position.
     pub fn getCenter(self: *Self) Vector2 {
         // TODO update for multi tile objects
         return .{
@@ -176,11 +176,6 @@ pub const Movement = struct {
         try self.pos_changed_event.dispatch(target_pos);
         self.pos = target_pos;
     }
-
-    // Returns the position without the screen size compensation applied.
-    // pub fn getNativePos(self: *Self) Vector2 {
-    //     return self.pos.scale(1 / settings.resolution_ratio);
-    // }
 
     // pub fn smooth_in_out_move(self: *Self, target_pos: Vector2, delta: f32) void {
     //     self.motion = Vector2.subtract(target_pos, self.pos);
@@ -227,8 +222,8 @@ pub const Collider = struct {
     /// Returns true if collision occured, otherwise, false.
     pub fn checkCollisionAtPos(self: *Self, pos: Vector2) bool {
         const coords = TileMap.Coordinates.fromPosition(pos);
-        if (coords.equals(self.last_coordinates)) return self.last_collision_check;
-        self.last_coordinates = coords;
+        // if (coords.equals(self.last_coordinates)) return self.last_collision_check;
+        // self.last_coordinates = coords;
         
         const coord_offset: [9]TileMap.Coordinates = .{
             .{.x = -1, .y = -1},
@@ -253,7 +248,7 @@ pub const Collider = struct {
             is_colliding = is_colliding or self.isColliding(collision_shape);
         }
         
-        self.last_collision_check = is_colliding;
+        // self.last_collision_check = is_colliding;
         return is_colliding;
     }
 

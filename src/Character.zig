@@ -54,11 +54,11 @@ fn updateVisuals(self: *Self) !void {
 }
 
 pub fn draw(self: *Self) void {
+    self.animation.draw(self.movement.pos);
+    
     if (@import("builtin").mode == .Debug) {
         debugDraw(self);
     }
-    
-    self.animation.draw(self.movement.pos);
 }
 
 fn debugDraw(self: *Self) void {
@@ -82,18 +82,16 @@ fn debugDraw(self: *Self) void {
             @intFromFloat(pos.x * settings.resolution_ratio),
             @intFromFloat(pos.y * settings.resolution_ratio),
             5,
-            rl.Color.green
+            rl.Color.orange,
         );
     }
 }
 
-// /// Returns the position of the center point
-// fn getCenter(self: *Self) Vector2 {
-//     const center_offset = self.animation.getCenter();
-//     return center_offset
-//         .scale(settings.resolution_ratio)
-//         .
-// }
+/// Returns the position of the center point
+fn getCenter(self: *Self) Vector2 {
+    const center_offset = self.animation.getCenter();
+    return center_offset.add(self.movement.pos);
+}
 
 fn moveAndCollide(self: *Self, delta: f32) !void {
     const input_vec = input.getInputVector();
@@ -102,6 +100,7 @@ fn moveAndCollide(self: *Self, delta: f32) !void {
     const next_pos = self.movement.getNextPos(input_vec, delta);
     const is_colliding = self.collider.checkCollisionAtPos(next_pos);
     if (is_colliding) return;
+    // std.debug.print("pos: {any}\ncoord: {any}\n\n", .{self.movement.pos.add(center_offset), Coordinates.fromPosition(self.movement.pos.add(center_offset))});
     try self.movement.move(next_pos);
 }
 

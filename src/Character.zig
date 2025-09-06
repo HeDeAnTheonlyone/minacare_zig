@@ -2,6 +2,7 @@ const std = @import("std");
 const rl = @import("raylib");
 const settings = @import("Settings.zig");
 const event = @import("event.zig");
+const drawer = @import("drawer.zig");
 const components = @import("components.zig");
 const TileMap = @import("TileMap.zig");
 const Coordinates = TileMap.Coordinates;
@@ -64,13 +65,8 @@ pub fn draw(self: *Self) void {
 fn debugDraw(self: *Self) void {
     if (settings.debug) {
         const hitbox = self.collider.hitbox;
-        rl.drawRectangleLinesEx(
-            Rectangle.init(
-                hitbox.x * settings.resolution_ratio,
-                hitbox.y * settings.resolution_ratio,
-                hitbox.width * settings.resolution_ratio,
-                hitbox.height * settings.resolution_ratio,
-            ),
+        drawer.drawRectOutline(
+            hitbox,
             5,
             rl.Color.red
         );
@@ -78,9 +74,9 @@ fn debugDraw(self: *Self) void {
 
     if (settings.debug) {
         const pos = self.movement.pos;
-        rl.drawCircle(
-            @intFromFloat(pos.x * settings.resolution_ratio),
-            @intFromFloat(pos.y * settings.resolution_ratio),
+        drawer.drawCircle(
+            pos.x,
+            pos.y,
             5,
             rl.Color.orange,
         );
@@ -98,10 +94,19 @@ fn moveAndCollide(self: *Self, delta: f32) !void {
     if (input_vec.equals(Vector2.zero()) != 0) return;
 
     const next_pos = self.movement.getNextPos(input_vec, delta);
-    const is_colliding = self.collider.checkCollisionAtPos(next_pos);
-    if (is_colliding) return;
-    // std.debug.print("pos: {any}\ncoord: {any}\n\n", .{self.movement.pos.add(center_offset), Coordinates.fromPosition(self.movement.pos.add(center_offset))});
-    try self.movement.move(next_pos);
+    const is_x_colliding = self.collider.checkCollisionAtPos(.{.x = next_pos.x, .y = self.movement.pos.y});
+    const is_y_colliding = self.collider.checkCollisionAtPos(.{.x = self.movement.pos.x, .y = next_pos.y});
+    if (is_x_colliding and is_y_colliding) return;
+    
+    if (is_x_colliding) try self.movement.move(.{
+        .x = self.movement.pos.x,
+        .y = next_pos.y
+    })
+    else if (is_y_colliding) try self.movement.move(.{
+        .x = next_pos.x,
+        .y = self.movement.pos.y
+    })
+    else try self.movement.move(next_pos);
 }
 
 const Template = enum {
@@ -126,8 +131,14 @@ pub fn initTemplate(template: Template, current_map: *TileMap.RuntimeMap.Collisi
                 100,
             );
             
+            const frame_rect = animation.getFrameRect();
             const collider = Collider{
-                .hitbox = animation.getFrameRect(),
+                .hitbox = Rectangle.init(
+                    spawn_pos.x,
+                    spawn_pos.y,
+                    frame_rect.width,
+                    frame_rect.height,
+                ),
                 .current_map = current_map,
             };
 

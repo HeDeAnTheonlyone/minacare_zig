@@ -1,8 +1,9 @@
 const std = @import("std");
+const settings = @import("Settings.zig");
+const drawer = @import("drawer.zig");
 const rl = @import("raylib").raylib_module;
 const Vector2 = rl.Vector2;
 const Rectangle = rl.Rectangle;
-const settings = @import("Settings.zig");
 
 /// Texture should be the same regardless what world map is loaded as all tiles should ideally be in the same file.
 texture: rl.Texture2D,
@@ -32,7 +33,7 @@ pub fn deinit(self: *Self, allocator: std.mem.Allocator) void {
 
 pub fn draw(self: *Self) void {
     for (self.tile_render_cache) |draw_data| {
-        rl.drawTexturePro(
+        drawer.drawTexturePro(
             self.texture,
             draw_data.source_rect,
             draw_data.dest_rect,
@@ -44,6 +45,19 @@ pub fn draw(self: *Self) void {
 
     if (@import("builtin").mode == .Debug) {
         self.debugDraw();
+    }
+}
+
+fn debugDraw(self: *Self) void {
+    if(settings.debug) {
+        var iter = self.map_data.collision_map.collision_shapes.iterator();
+        while (iter.next()) |collision_shape| {
+            drawer.drawRectOutline(
+                collision_shape.value_ptr.*,
+                5,
+                rl.Color.blue
+            );
+        }
     }
 }
 
@@ -93,10 +107,10 @@ pub fn updateTileRenderCache(self_: *anyopaque, player_pos: Vector2) !void {
                 const chunk_row: i32 = @intCast(@divFloor(i, settings.chunk_size));
 
                 const tile_dest_rect = Rectangle.init(
-                    @as(f32, @floatFromInt(chunk.x * settings.tile_size + chunk_column * settings.tile_size)) * settings.resolution_ratio,
-                    @as(f32, @floatFromInt(chunk.y * settings.tile_size + chunk_row * settings.tile_size)) * settings.resolution_ratio,
-                    settings.tile_size * settings.resolution_ratio,
-                    settings.tile_size * settings.resolution_ratio,
+                    @as(f32, @floatFromInt(chunk.x * settings.tile_size + chunk_column * settings.tile_size)),
+                    @as(f32, @floatFromInt(chunk.y * settings.tile_size + chunk_row * settings.tile_size)),
+                    settings.tile_size,
+                    settings.tile_size,
                 );
 
                 self.tile_render_cache[index] = .{
@@ -105,25 +119,6 @@ pub fn updateTileRenderCache(self_: *anyopaque, player_pos: Vector2) !void {
                 };
                 index += 1;
             }
-        }
-    }
-}
-
-fn debugDraw(self: *Self) void {
-    if(settings.debug) {
-        var iter = self.map_data.collision_map.collision_shapes.iterator();
-        while (iter.next()) |collision_shape| {
-            const v = collision_shape.value_ptr;
-            rl.drawRectangleLinesEx(
-                Rectangle.init(
-                    v.x * settings.resolution_ratio,
-                    v.y * settings.resolution_ratio,
-                    v.width * settings.resolution_ratio,
-                    v.height * settings.resolution_ratio,
-                ),
-                5,
-                rl.Color.blue
-            );
         }
     }
 }

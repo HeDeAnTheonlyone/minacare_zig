@@ -2,6 +2,7 @@ const std = @import("std");
 const rl = @import("raylib");
 const settings = @import("Settings.zig"); 
 const event = @import("event.zig");
+const drawer = @import("drawer.zig");
 const TileMap = @import("TileMap.zig");
 const Rectangle = rl.Rectangle;
 const Vector2 = rl.Vector2;
@@ -52,14 +53,14 @@ pub const AnimationPlayer = struct {
     }
 
     pub fn draw(self: Self, pos: rl.Vector2) void {
-        rl.drawTexturePro(
+        drawer.drawTexturePro(
             self.texture,
             self.frame_rect,
             Rectangle.init(
-                pos.x * settings.resolution_ratio,
-                pos.y * settings.resolution_ratio,
-                self.frame_rect.width * settings.resolution_ratio,
-                self.frame_rect.height * settings.resolution_ratio
+                pos.x,
+                pos.y,
+                self.frame_rect.width,
+                self.frame_rect.height
             ),
             Vector2.zero(),
             0,
@@ -209,12 +210,10 @@ pub const input = struct {
 };
 
 pub const Collider = struct {
+    // TODO properly scale down the hitbox a bit to make the collision feeling better
     hitbox: Rectangle,
     // TODO abstract current_map later for multiple collision sources (ex.: entities)
     current_map: *TileMap.RuntimeMap.CollisionMap,
-    // TODO make cache only work for collision map when other collisions sources get added
-    last_coordinates: TileMap.Coordinates = undefined,
-    last_collision_check: bool = undefined,
 
     const Self = @This();
 
@@ -222,9 +221,9 @@ pub const Collider = struct {
     /// Returns true if collision occured, otherwise, false.
     pub fn checkCollisionAtPos(self: *Self, pos: Vector2) bool {
         const coords = TileMap.Coordinates.fromPosition(pos);
-        // if (coords.equals(self.last_coordinates)) return self.last_collision_check;
-        // self.last_coordinates = coords;
         
+        // TODO make x and y movement collisions independent.
+
         const coord_offset: [9]TileMap.Coordinates = .{
             .{.x = -1, .y = -1},
             .{.x = 0, .y = -1},
@@ -248,7 +247,6 @@ pub const Collider = struct {
             is_colliding = is_colliding or self.isColliding(collision_shape);
         }
         
-        // self.last_collision_check = is_colliding;
         return is_colliding;
     }
 

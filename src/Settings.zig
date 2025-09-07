@@ -1,3 +1,6 @@
+const std = @import("std");
+const rl = @import("raylib");
+const rg= @import("raygui");
 
 pub const native_width: i32 = 630;
 pub const native_height: i32 = 360;
@@ -9,12 +12,18 @@ pub var target_fps: i32 = 170;
 pub const tile_size: u8 = 16; // counts for x and y
 pub const chunk_size: u8 = 32; // counts for x and y
 pub const frame_time_cap: f32 = 0.05;
+pub var font: rl.Font = undefined; // needs OpenGL context
 
 pub const debug = true;
 
 /// Initializes all settings that can not be comptime evaluated
-pub fn init() void {
+pub fn init() !void {
     resolution_ratio = getResolutionRatio();
+    font = try rl.loadFontEx("assets/fonts/vividly_extended.ttf", 32, null);
+}
+
+pub fn deinit() void {
+    font.unload();
 }
 
 pub fn getResolutionRatio() f32 {

@@ -1,6 +1,7 @@
 const std = @import("std");
 const rl = @import("raylib");
-const settings = @import("Settings.zig");
+const settings = @import("settings.zig");
+const debug = @import("debug.zig");
 const event = @import("event.zig");
 const drawer = @import("drawer.zig");
 const components = @import("components.zig");
@@ -16,21 +17,13 @@ const Vector2 = rl.Vector2;
 animation: AnimationPlayer,
 movement: Movement,
 collider: Collider,
+vtable: *const VTable,
 
 const Self = @This();
 
-/// Deinitialize with `deinit()`
-fn init(animation: AnimationPlayer, movement: Movement, collider: Collider) !Self {
-    return .{
-        .animation = animation,
-        .movement = movement,
-        .collider = collider,
-    };
-}
-
-pub fn deinit(self: *Self) void {
-    self.animation.deinit();
-}
+pub const VTable = struct {
+    updateVisuals: *const fn(self: *Self) anyerror!void,
+};
 
 pub fn update(self_: *anyopaque, delta: f32) !void {
     const self: *Self = @alignCast(@ptrCast(self_));
@@ -41,30 +34,44 @@ pub fn update(self_: *anyopaque, delta: f32) !void {
 }
 
 fn updateVisuals(self: *Self) !void {
-    const input_vec = input.getInputVector();
-    if (input_vec.x < 0) self.animation.h_flip = false
-    else if (input_vec .x > 0) self.animation.h_flip = true;
-
-    if (input_vec.length() == 0) try self.animation.setAnimation(0)
-    else try self.animation.setAnimation(1);
+    try self.vtable.updateVisuals(self);
 }
 
 pub fn draw(self: *Self) void {
     self.animation.draw(self.movement.pos);
     
     if (@import("builtin").mode == .Debug) {
-        self.collider.debugDraw(self.movement.pos);
-        self.movement.debugDraw();
         self.debugDraw();
     }
 }
 
 pub fn debugDraw(self: *Self) void {
-    drawer.drawCircle(
-        self.getCenter(),
-        5,
-        .pink
-    );
+    if (debug.show_character_hitbox) {
+        drawer.drawRectOutline(
+            Rectangle.init(
+                self.collider.hitbox.x + self.movement.pos.x,
+                self.collider.hitbox.y + self.movement.pos.y,
+                self.collider.hitbox.width,
+                self.collider.hitbox.width,
+            ),
+            5,
+            .red
+        );
+    }
+    if (debug.show_character_origin) {
+        drawer.drawCircle(
+            self.movement.pos,
+            5,
+            .orange,
+        );
+    }
+    if (debug.show_character_center) {
+        drawer.drawCircle(
+            self.getCenter(),
+            5,
+            .orange
+        );
+    }
 }
 
 /// Returns the position of the center point
@@ -90,89 +97,4 @@ fn moveAndCollide(self: *Self, delta: f32) !void {
     if (is_x_colliding) try self.movement.move(self.movement.pos.add(y_motion))
     else if (is_y_colliding) try self.movement.move(self.movement.pos.add(x_motion))
     else try self.movement.move(self.movement.pos.add(motion));
-}
-
-const Template = enum {
-    Cerby,
-    BlueMinawan,
-};
-
-/// Init a new character with the given template. Deinitialize with `deinit()`.
-pub fn initTemplate(template: Template, spawn_pos: Vector2) !Self {
-    return switch (template) {
-        .Cerby => blk: {           
-            const tex = try rl.loadTexture("assets/textures/characters_spritesheet.png");
-            const animation = AnimationPlayer.init(
-                tex,
-                1,
-                1,
-                7
-            );
-
-            const movement = Movement.init(
-                spawn_pos,
-                100,
-            );
-            
-            const collider = Collider{
-                .hitbox = Rectangle.init(
-                    0,
-                    3,
-                    16,
-                    13,
-                ),
-            };
-
-            var obj = try Self.init(
-                animation,
-                movement,
-                collider,
-            );
-
-            // Standing
-            try obj.animation.addAnimation(.{ .start_frame = 0, .end_frame = 0 });
-
-            // Walking
-            try obj.animation.addAnimation(.{ .start_frame = 1, .end_frame = 8 });
-
-            break :blk obj;
-        },
-        .BlueMinawan => blk: {
-            const tex = try rl.loadTexture("assets/textures/characters_spritesheet.png");
-            const animation = AnimationPlayer.init(
-                tex,
-                1,
-                1,
-                7
-            );
-
-            const movement = Movement.init(
-                spawn_pos,
-                40,
-            );
-            
-            const collider = Collider{
-                .hitbox = Rectangle.init(
-                    0,
-                    3,
-                    16,
-                    13,
-                ),
-            };
-
-            var obj = try Self.init(
-                animation,
-                movement,
-                collider,
-            );
-
-            // Standing
-            try obj.animation.addAnimation(.{ .start_frame = 81, .end_frame = 84 });
-
-            // Walking
-            try obj.animation.addAnimation(.{ .start_frame = 81, .end_frame = 84 });
-
-            break :blk obj;
-        } 
-    };
 }

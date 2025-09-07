@@ -1,7 +1,8 @@
 const std = @import("std");
 const rl = @import("raylib");
-const settings = @import("Settings.zig");
-const GameState = @import("GameState.zig");
+const settings = @import("settings.zig");
+const debug = @import("debug.zig");
+const game_state = @import("game_state.zig");
 const event = @import("event.zig");
 const drawer = @import("drawer.zig");
 const TileMap = @import("TileMap.zig");
@@ -22,15 +23,16 @@ pub const AnimationPlayer = struct {
     animations: [max_animations]Animation = undefined,
     current_frame: u16 = 0,
     animation_count: u8 = 0,
-    current_animation: u8 = 0,
+    current_animation: *Animation = undefined,
     h_flip: bool = false,
     looping: bool = true,
     paused: bool = false,
 
     const Self = @This();
-    const max_animations = 64;
+    const max_animations = 32;
 
     pub const Animation = struct {
+        name: []const u8,
         start_frame: u16,
         end_frame: u16,
 
@@ -49,10 +51,6 @@ pub const AnimationPlayer = struct {
         };
         updateFrame(&obj);
         return obj;
-    }
-
-    pub fn deinit(self: *Self) void {
-        rl.unloadTexture(self.texture);
     }
 
     pub fn draw(self: Self, pos: rl.Vector2) void {
@@ -86,7 +84,7 @@ pub const AnimationPlayer = struct {
     }
 
     fn updateFrameTime(self: *Self, delta: f32) void {
-        if (self.animations[self.current_animation].getFrameCount() == 1) return;
+        if (self.current_animation.getFrameCount() == 1) return;
         if (self.paused) return;
         if (self.frame_time < 1) return;
 
@@ -100,7 +98,7 @@ pub const AnimationPlayer = struct {
 
     fn updateFrame(self: *Self) void {
         const columns = @divFloor(self.texture.width, self.getFrameWidth());
-        const frame = self.animations[self.current_animation].start_frame + self.current_frame;
+        const frame = self.current_animation.start_frame + self.current_frame;
 
         const column = @mod(frame, columns);
         const row = @divFloor(frame, columns);
@@ -113,7 +111,7 @@ pub const AnimationPlayer = struct {
         };
 
         self.current_frame += 1;
-        const total_frames = self.animations[self.current_animation].getFrameCount();
+        const total_frames = self.current_animation.getFrameCount();
         if (self.current_frame >= total_frames) {
             if (self.looping) self.current_frame = 0
             else self.current_frame = total_frames;
@@ -127,10 +125,16 @@ pub const AnimationPlayer = struct {
         self.animation_count += 1;
     }
 
-    pub fn setAnimation(self: *Self, id: u8) !void {
-        if (id == self.current_animation) return;
-        if (id > self.animation_count - 1) return error.OutOfBounds;
-        self.current_animation = id;
+    pub fn setAnimation(self: *Self, name: []const u8) !void { 
+        if (self.animation_count == 0) return error.EmptyAnimationList;
+        if (std.mem.eql(u8, name, self.current_animation.name)) return;
+        self.current_animation = blk: {
+            for (self.animations, 0..) |anim, i| {
+                if (std.mem.eql(u8, anim.name, name))
+                    break :blk &self.animations[i];
+            }
+            return error.NoMatchingAnimation;
+        };
         self.current_frame = 0;
         self.sub_frame_counter = 0;
         updateFrame(self);
@@ -153,7 +157,7 @@ pub const AnimationPlayer = struct {
         );
     }
 
-    /// Retuns the center in pixels in the current frame, not the world position.
+    /// Retuns as an offset and size from the position
     pub fn getCenter(self: *Self) Vector2 {
         return .{
             .x = @floatFromInt(@divFloor(self.getFrameWidth(), 2)),
@@ -184,17 +188,6 @@ pub const Movement = struct {
     pub fn move(self: *Self, target_pos: Vector2, ) !void {
         try self.pos_changed_event.dispatch(target_pos);
         self.pos = target_pos;
-    }
-
-    pub fn debugDraw(self: *Self) void {
-        if (settings.debug) {
-            const pos = self.pos;
-            drawer.drawCircle(
-                pos,
-                5,
-                rl.Color.purple,
-            );
-        }
     }
 };
 
@@ -253,7 +246,7 @@ pub const Collider = struct {
                     settings.tile_size
                 ));
 
-                const collision_shape = GameState.map.getTileCollision(offset_pos) orelse continue;
+                const collision_shape = game_state.map.getTileCollision(offset_pos) orelse continue;
                 is_colliding = is_colliding or positioned_hitbox.checkCollision(collision_shape);
             }
         }
@@ -261,27 +254,11 @@ pub const Collider = struct {
         return is_colliding;
     }
 
-    /// Retuns the center in pixels in the current frame, not the world position.
+    /// Retuns as an offset and size from the position.
     pub fn getCenter(self: *Self) Vector2 {
         return .{
             .x = self.hitbox.width / 2 + self.hitbox.x,
             .y = self.hitbox.height / 2 + self.hitbox.y,
         };
-    }
-
-    pub fn debugDraw(self: *Self, pos: Vector2) void {
-        if (settings.debug) {
-            const rect = Rectangle.init(
-                self.hitbox.x + pos.x,
-                self.hitbox.y + pos.y,
-                self.hitbox.width,
-                self.hitbox.height,
-            );
-            drawer.drawRectOutline(
-                rect,
-                5,
-                rl.Color.red
-            );
-        }
     }
 };

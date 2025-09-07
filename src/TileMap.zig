@@ -1,5 +1,6 @@
 const std = @import("std");
-const settings = @import("Settings.zig");
+const settings = @import("settings.zig");
+const debug = @import("debug.zig");
 const drawer = @import("drawer.zig");
 const rl = @import("raylib").raylib_module;
 const Vector2 = rl.Vector2;
@@ -27,7 +28,7 @@ pub fn init(allocator: std.mem.Allocator, map_name: []const u8, initial_render_p
 }
 
 pub fn deinit(self: *Self, allocator: std.mem.Allocator) void {
-    rl.unloadTexture(self.texture);
+    self.texture.unload();
     self.map_data.deinit(allocator);
 }
 
@@ -49,7 +50,7 @@ pub fn draw(self: *Self) void {
 }
 
 fn debugDraw(self: *Self) void {
-    if(settings.debug) {
+    if(debug.show_tile_map_collisions) {
         var iter = self.map_data.collision_map.collision_shapes.iterator();
         while (iter.next()) |collision_shape| {
             drawer.drawRectOutline(

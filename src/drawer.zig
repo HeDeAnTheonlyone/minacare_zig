@@ -1,4 +1,4 @@
-const settings = @import("Settings.zig");
+const settings = @import("settings.zig");
 const rl = @import("raylib").raylib_module;
 const Rectangle = rl.Rectangle;
 const Vector2 = rl.Vector2;

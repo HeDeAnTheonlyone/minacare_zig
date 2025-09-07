@@ -130,8 +130,9 @@ pub fn getTileCollision(self: *Self, player_pos: Vector2) ?Rectangle {
 
 /// Chunk coordinates are the position divided by the tile size and the chunk size.
 pub fn getChunkCoordFromPos(native_pos: Vector2) ChunkCoordinates {
-    const coordinate = Coordinates.fromPosition(native_pos);
-    return coordinate.divideScalar(settings.chunk_size);
+    return Coordinates
+        .fromPosition(native_pos)
+        .divideScalar(settings.chunk_size);
 }
 
 const TileDrawData = struct {
@@ -151,11 +152,10 @@ pub fn CoordinatesDef() type {
 
         /// Coordinate are position divided by the tile size.
         pub fn fromPosition(pos: Vector2) Coordinates {
+            const x = @as(i32, @intFromFloat(pos.x));
+            const y = @as(i32, @intFromFloat(pos.y));
             return Coordinates.divideScalar(
-                .{
-                    .x = @intFromFloat(pos.x),
-                    .y = @intFromFloat(pos.y),
-                },
+                .{ .x = x, .y = y },
                 settings.tile_size,
             );
         }
@@ -178,10 +178,31 @@ pub fn CoordinatesDef() type {
             };
         }
 
-        pub fn addValue(self: SelfCoords, scalar: i32) SelfCoords {
+        pub fn addValue(self: SelfCoords, addend: i32) SelfCoords {
             return .{
-                .x = self.x + scalar,
-                .y = self.y + scalar,
+                .x = self.x + addend,
+                .y = self.y + addend,
+            };
+        }
+
+        pub fn subtract(self: SelfCoords, subtrahend: SelfCoords) SelfCoords {
+            return .{
+                .x = self.x - subtrahend.x,
+                .y = self.y - subtrahend.y,
+            };
+        }
+
+        pub fn subtractValue(self: SelfCoords, subtrahend: i32) SelfCoords {
+            return .{
+                .x = self.x - subtrahend,
+                .y = self.y - subtrahend,
+            };
+        }
+
+        pub fn multiplyScalar(self: SelfCoords, multiplicant: i32) SelfCoords {
+            return .{
+                .x = self.x * multiplicant,
+                .y = self.y * multiplicant,
             };
         }
 
@@ -196,6 +217,13 @@ pub fn CoordinatesDef() type {
             return .{
                 .x = @divFloor(self.x, divisor),
                 .y = @divFloor(self.y, divisor),
+            };
+        }
+
+        pub fn modScalar(self: *SelfCoords, divisor: i32) SelfCoords {
+            return .{
+                .x = @rem(self.x, divisor),
+                .y = @rem(self.y, divisor),
             };
         }
     };

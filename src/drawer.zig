@@ -4,6 +4,14 @@ const Rectangle = rl.Rectangle;
 const Vector2 = rl.Vector2;
 const Color = rl.Color;
 
+pub fn drawFps(pos: Vector2) void {
+    const scaled_pos = pos.scale(settings.resolution_ratio);
+    rl.drawFPS(
+        @intFromFloat(scaled_pos.x),
+        @intFromFloat(scaled_pos.y)
+    );
+}
+
 pub fn drawTexturePro(
     texture: rl.Texture2D,
     source: Rectangle,
@@ -30,10 +38,11 @@ pub fn drawRectOutline(rect: Rectangle, line_thickness: f32, color: Color) void 
     );
 }
 
-pub fn drawCircle(center_x: f32, center_y: f32, radius: f32, color: Color) void {
+pub fn drawCircle(center: Vector2, radius: f32, color: Color) void {
+    const scaled_center = center.scale(settings.resolution_ratio);
     rl.drawCircle(
-        @intFromFloat(center_x * settings.resolution_ratio),
-        @intFromFloat(center_y * settings.resolution_ratio),
+        @intFromFloat(scaled_center.x),
+        @intFromFloat(scaled_center.y),
         radius,
         color
     );

@@ -1,6 +1,7 @@
 const std = @import("std");
 const rl = @import("raylib");
-const settings = @import("Settings.zig"); 
+const settings = @import("Settings.zig");
+const GameState = @import("GameState.zig");
 const event = @import("event.zig");
 const drawer = @import("drawer.zig");
 const TileMap = @import("TileMap.zig");
@@ -12,8 +13,10 @@ const DummyError = error{};
 pub const AnimationPlayer = struct {
     texture: rl.Texture,
     frame_rect: Rectangle = undefined,
-    frame_width: i32,
-    frame_height: i32,
+    // frame_width: i32,
+    // frame_height: i32,
+    v_tiles: u8,
+    h_tiles: u8,
     sub_frame_counter: f32 = 0,
     frame_time: f32 = 0,
     animations: [max_animations]Animation = undefined,
@@ -32,16 +35,16 @@ pub const AnimationPlayer = struct {
         end_frame: u16,
 
         /// Returns the total amount of frames for this animation
-        pub fn getFramesCount(self: *Animation) u16 {
+        pub fn getFrameCount(self: *Animation) u16 {
             return self.end_frame - self.start_frame + 1;
         }
     };
 
-    pub fn init(texture: rl.Texture2D, frame_width: i32, frame_height: i32, frame_time: f32) Self {
+    pub fn init(texture: rl.Texture2D, v_tiles: u8, h_tiles: u8, frame_time: f32) Self {
         var obj = Self {
             .texture = texture,
-            .frame_width = frame_width,
-            .frame_height = frame_height,
+            .v_tiles = v_tiles,
+            .h_tiles = h_tiles,
             .frame_time  = frame_time,
         };
         updateFrame(&obj);
@@ -74,8 +77,16 @@ pub const AnimationPlayer = struct {
         updateFrameTime(self, delta);
     }
 
+    pub fn getFrameWidth(self: *Self) i32 {
+        return self.v_tiles * settings.tile_size;
+    }
+
+    pub fn getFrameHeight(self: *Self) i32 {
+        return self.h_tiles * settings.tile_size;
+    }
+
     fn updateFrameTime(self: *Self, delta: f32) void {
-        if (self.animations[self.current_animation].getFramesCount() == 1) return;
+        if (self.animations[self.current_animation].getFrameCount() == 1) return;
         if (self.paused) return;
         if (self.frame_time < 1) return;
 
@@ -88,21 +99,21 @@ pub const AnimationPlayer = struct {
     }
 
     fn updateFrame(self: *Self) void {
-        const columns = @divFloor(self.texture.width, self.frame_width);
+        const columns = @divFloor(self.texture.width, self.getFrameWidth());
         const frame = self.animations[self.current_animation].start_frame + self.current_frame;
 
         const column = @mod(frame, columns);
         const row = @divFloor(frame, columns);
 
         self.frame_rect = Rectangle{
-            .x = @floatFromInt(column * self.frame_width),
-            .y = @floatFromInt(row * self.frame_height),
-            .width = @floatFromInt(if (self.h_flip) -self.frame_width else self.frame_width),
-            .height = @floatFromInt(self.frame_height),
+            .x = @floatFromInt(column * self.getFrameWidth()),
+            .y = @floatFromInt(row * self.getFrameHeight()),
+            .width = @floatFromInt(if (self.h_flip) -self.getFrameWidth() else self.getFrameWidth()),
+            .height = @floatFromInt(self.getFrameHeight()),
         };
 
         self.current_frame += 1;
-        const total_frames = self.animations[self.current_animation].getFramesCount();
+        const total_frames = self.animations[self.current_animation].getFrameCount();
         if (self.current_frame >= total_frames) {
             if (self.looping) self.current_frame = 0
             else self.current_frame = total_frames;
@@ -128,7 +139,7 @@ pub const AnimationPlayer = struct {
     /// Sets and updates the animations frame
     pub fn setFrame(self: *Self, frame: u8) void {
         self.current_frame = frame;
-        const total_frames = self.animations[self.current_animation].getFramesCount();
+        const total_frames = self.animations[self.current_animation].getFrameCount();
         if (self.current_frame >= total_frames) self.current_frame = 0;
         updateFrame(self);
     }
@@ -137,24 +148,22 @@ pub const AnimationPlayer = struct {
         return Rectangle.init(
             0,
             0,
-            @floatFromInt(self.frame_width),
-            @floatFromInt(self.frame_height),
+            @floatFromInt(self.getFrameWidth()),
+            @floatFromInt(self.getFrameHeight()),
         );
     }
 
     /// Retuns the center in pixels in the current frame, not the world position.
     pub fn getCenter(self: *Self) Vector2 {
-        // TODO update for multi tile objects
         return .{
-            .x = @floatFromInt(@divFloor(self.frame_width, 2)),
-            .y = @floatFromInt(@divFloor(self.frame_height, 2)),
+            .x = @floatFromInt(@divFloor(self.getFrameWidth(), 2)),
+            .y = @floatFromInt(@divFloor(self.getFrameHeight(), 2)),
         };
     }
 };
 
 pub const Movement = struct {
     pos: Vector2,
-    motion: Vector2 = Vector2.splat(0),
     speed: f32,
     pos_changed_event: event.Dispatcher(Vector2) = .init,
 
@@ -167,10 +176,9 @@ pub const Movement = struct {
         };
     }
 
-    pub fn getNextPos(self: *Self, input_vec: Vector2, delta: f32) Vector2 {
+    pub fn getMotion(self: *Self, input_vec: Vector2, delta: f32) Vector2 {
         const s = self.speed * delta;
-        self.motion = input_vec.scale(s);
-        return self.pos.add(self.motion);
+        return input_vec.scale(s);
     }
 
     pub fn move(self: *Self, target_pos: Vector2, ) !void {
@@ -178,24 +186,16 @@ pub const Movement = struct {
         self.pos = target_pos;
     }
 
-    // pub fn smooth_in_out_move(self: *Self, target_pos: Vector2, delta: f32) void {
-    //     self.motion = Vector2.subtract(target_pos, self.pos);
-
-    //     self.velocity =
-    //         if (self.motion.length() > self.stopping_distance) std.math.clamp(
-    //             self.velocity + self.acceleration * delta,
-    //             0,
-    //             self.max_speed * 0.1
-    //         )
-    //         else std.math.clamp(
-    //             self.velocity - self.acceleration * 1.5 * delta,
-    //             0,
-    //             self.max_speed * 0.1
-    //         );
-        
-    //     const lerp_amount = std.math.clamp(self.velocity / self.motion.length(), 0, 1);
-    //     self.pos = Vector2.lerp(self.pos, target_pos, lerp_amount);
-    // }
+    pub fn debugDraw(self: *Self) void {
+        if (settings.debug) {
+            const pos = self.pos;
+            drawer.drawCircle(
+                pos,
+                5,
+                rl.Color.purple,
+            );
+        }
+    }
 };
 
 pub const input = struct {
@@ -209,55 +209,79 @@ pub const input = struct {
     }
 };
 
+/// Defines the collision shape of an object and handles the collision checks.
+/// The collider is defined relative in the frame.
+/// It is assumed that (0, 0) of the frame is the current position of the object
 pub const Collider = struct {
-    // TODO properly scale down the hitbox a bit to make the collision feeling better
     hitbox: Rectangle,
-    // TODO abstract current_map later for multiple collision sources (ex.: entities)
-    current_map: *TileMap.RuntimeMap.CollisionMap,
 
     const Self = @This();
 
-    /// Checks in a 3x3 tile field around the player for collisions.
-    /// Returns true if collision occured, otherwise, false.
+    /// Checks in a hitbox adjusted tile field around the player for collisions.
+    /// Returns true if collision ocured, otherwise, false.
     pub fn checkCollisionAtPos(self: *Self, pos: Vector2) bool {
-        const coords = TileMap.Coordinates.fromPosition(pos);
+        const positioned_hitbox = Rectangle.init(
+            self.hitbox.x + pos.x,
+            self.hitbox.y + pos.y,
+            self.hitbox.width,
+            self.hitbox.height,
+        );
+
+        const center_pos = pos.add(self.getCenter());
+        const x_col_range = std.math.clamp(
+            @as(u8, @intFromFloat(self.hitbox.width / settings.tile_size)),
+            1,
+            std.math.maxInt(u8)
+        );
+        const y_col_range = std.math.clamp(
+            @as(u8, @intFromFloat(self.hitbox.height / settings.tile_size)),
+            1,
+            std.math.maxInt(u8)
+        );
         
-        // TODO make x and y movement collisions independent.
-
-        const coord_offset: [9]TileMap.Coordinates = .{
-            .{.x = -1, .y = -1},
-            .{.x = 0, .y = -1},
-            .{.x = 1, .y = -1},
-            .{.x = -1, .y = 0},
-            .{.x = 0, .y = 0},
-            .{.x = 1, .y = 0},
-            .{.x = -1, .y = 1},
-            .{.x = 0, .y = 1},
-            .{.x = 1, .y = 1},
-        };
-
-        const backup_x, const backup_y = .{self.hitbox.x, self.hitbox.y};
-        defer self.hitbox.x, self.hitbox.y = .{backup_x, backup_y};
-        try moveHitbox(self, pos);
-
         var is_colliding = false;
-        for (coord_offset) |offset| {
-            const offset_coords = coords.add(offset);
-            const collision_shape = self.current_map.collision_shapes.get(offset_coords) orelse continue;
-            is_colliding = is_colliding or self.isColliding(collision_shape);
+        for (0..x_col_range * 2 + 1) |xo| {
+            const x_offset = @as(i8, @intCast(xo)) - @as(i8, @intCast(x_col_range));
+            for (0..y_col_range * 2 + 1) |yo| {
+                const y_offset = @as(i8, @intCast(yo)) - @as(i8, @intCast(y_col_range));
+
+                const offset_pos = center_pos.add(Vector2.scale(
+                    .{
+                        .x = @floatFromInt(x_offset),
+                        .y = @floatFromInt(y_offset),
+                    },
+                    settings.tile_size
+                ));
+
+                const collision_shape = GameState.map.getTileCollision(offset_pos) orelse continue;
+                is_colliding = is_colliding or positioned_hitbox.checkCollision(collision_shape);
+            }
         }
         
         return is_colliding;
     }
 
-    pub fn isColliding(self: *Self, collision_shape: Rectangle) bool {
-        return self.hitbox.checkCollision(collision_shape);
+    /// Retuns the center in pixels in the current frame, not the world position.
+    pub fn getCenter(self: *Self) Vector2 {
+        return .{
+            .x = self.hitbox.width / 2 + self.hitbox.x,
+            .y = self.hitbox.height / 2 + self.hitbox.y,
+        };
     }
 
-    pub fn moveHitbox(self_: *anyopaque, pos: Vector2) DummyError!void {
-        const self: *Self = @alignCast(@ptrCast(self_));
-
-        self.hitbox.x = pos.x;
-        self.hitbox.y = pos.y;
+    pub fn debugDraw(self: *Self, pos: Vector2) void {
+        if (settings.debug) {
+            const rect = Rectangle.init(
+                self.hitbox.x + pos.x,
+                self.hitbox.y + pos.y,
+                self.hitbox.width,
+                self.hitbox.height,
+            );
+            drawer.drawRectOutline(
+                rect,
+                5,
+                rl.Color.red
+            );
+        }
     }
 };

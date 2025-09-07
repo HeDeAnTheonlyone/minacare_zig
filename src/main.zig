@@ -1,6 +1,8 @@
 const std = @import("std");
 const rl = @import("raylib");
 const settings = @import("Settings.zig");
+const GameState = @import("GameState.zig");
+const drawer = @import("drawer.zig");
 const event = @import("event.zig");
 const TileMap = @import("TileMap.zig");
 const AnimationPlayer = @import("components.zig").AnimationPlayer;
@@ -24,27 +26,21 @@ pub fn main() !void {
 
     const spawn_pos = rl.Vector2{.x = 0, .y = 40};
 
-    var map = try TileMap.init(gpa, "test", spawn_pos);
-    defer map.deinit(gpa);
+    GameState.map = try TileMap.init(gpa, "test", spawn_pos);
 
     var cerby = try Character.initTemplate(
         .Cerby,
-        &map.map_data.collision_map,
         spawn_pos.scale(settings.tile_size)
     );
     defer cerby.deinit();
 
     try cerby.movement.pos_changed_event.add(.{
         .func = TileMap.updateTileRenderCache,
-        .ctx = &map,
-    });
-    try cerby.movement.pos_changed_event.add(.{
-        .func = components.Collider.moveHitbox,
-        .ctx = &cerby.collider,
+        .ctx = &GameState.map,
     });
 
     var cam = rl.Camera2D{
-        .target = cerby.movement.pos, 
+        .target = cerby.movement.pos.scale(settings.resolution_ratio), 
         .offset = rl.Vector2{
             .x = @as(f32, @floatFromInt(@divFloor(settings.window_width, 2))) - settings.tile_size / 2,
             .y = @as(f32, @floatFromInt(@divFloor(settings.window_height, 2))) - settings.tile_size / 2,
@@ -57,6 +53,8 @@ pub fn main() !void {
         .func = Character.update,
         .ctx = &cerby,
     });
+    
+    // All GameState values have to be initialized at this point.
 
     while(!rl.windowShouldClose())
     {
@@ -77,12 +75,13 @@ pub fn main() !void {
         
         rl.clearBackground(rl.Color.ray_white);
 
-        map.draw();
+        GameState.map.draw();
         cerby.draw();
-        rl.drawFPS(
-            @as(i32, @intFromFloat(cerby.movement.pos.x)) - 50,
-            @as(i32, @intFromFloat(cerby.movement.pos.y)) - 50
-        );
+        if (@import("builtin").mode == .Debug) {
+            drawer.drawFps(cerby.movement.pos.subtractValue(8));
+        }
         // ===
     }
+
+    GameState.deinit(gpa);
 }

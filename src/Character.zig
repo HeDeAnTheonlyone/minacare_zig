@@ -24,16 +24,11 @@ fn init(animation: AnimationPlayer, movement: Movement, collider: Collider) !Sel
     return .{
         .animation = animation,
         .movement = movement,
-        // TODO think of a more dynamic and flexible way for collider hitbox
         .collider = collider,
     };
 }
 
 pub fn deinit(self: *Self) void {
-    self.movement.pos_changed_event.remove(.{
-        .func = Collider.moveHitbox,
-        .ctx = &self.collider,
-    });
     self.animation.deinit();
 }
 
@@ -58,55 +53,43 @@ pub fn draw(self: *Self) void {
     self.animation.draw(self.movement.pos);
     
     if (@import("builtin").mode == .Debug) {
-        debugDraw(self);
+        self.collider.debugDraw(self.movement.pos);
+        self.movement.debugDraw();
+        self.debugDraw();
     }
 }
 
-fn debugDraw(self: *Self) void {
-    if (settings.debug) {
-        const hitbox = self.collider.hitbox;
-        drawer.drawRectOutline(
-            hitbox,
-            5,
-            rl.Color.red
-        );
-    }
-
-    if (settings.debug) {
-        const pos = self.movement.pos;
-        drawer.drawCircle(
-            pos.x,
-            pos.y,
-            5,
-            rl.Color.orange,
-        );
-    }
+pub fn debugDraw(self: *Self) void {
+    drawer.drawCircle(
+        self.getCenter(),
+        5,
+        .pink
+    );
 }
 
 /// Returns the position of the center point
 fn getCenter(self: *Self) Vector2 {
-    const center_offset = self.animation.getCenter();
-    return center_offset.add(self.movement.pos);
+    return self.collider
+        .getCenter()
+        .add(self.movement.pos);
 }
 
 fn moveAndCollide(self: *Self, delta: f32) !void {
     const input_vec = input.getInputVector();
     if (input_vec.equals(Vector2.zero()) != 0) return;
 
-    const next_pos = self.movement.getNextPos(input_vec, delta);
-    const is_x_colliding = self.collider.checkCollisionAtPos(.{.x = next_pos.x, .y = self.movement.pos.y});
-    const is_y_colliding = self.collider.checkCollisionAtPos(.{.x = self.movement.pos.x, .y = next_pos.y});
+    const motion= self.movement.getMotion(input_vec, delta);
+    const x_motion = Vector2{ .x = motion.x, .y = 0 };
+    const y_motion = Vector2{ .x = 0, .y = motion.y };
+
+    const is_x_colliding = self.collider.checkCollisionAtPos(self.movement.pos.add(x_motion));
+    const is_y_colliding = self.collider.checkCollisionAtPos(self.movement.pos.add(y_motion));
+
     if (is_x_colliding and is_y_colliding) return;
     
-    if (is_x_colliding) try self.movement.move(.{
-        .x = self.movement.pos.x,
-        .y = next_pos.y
-    })
-    else if (is_y_colliding) try self.movement.move(.{
-        .x = next_pos.x,
-        .y = self.movement.pos.y
-    })
-    else try self.movement.move(next_pos);
+    if (is_x_colliding) try self.movement.move(self.movement.pos.add(y_motion))
+    else if (is_y_colliding) try self.movement.move(self.movement.pos.add(x_motion))
+    else try self.movement.move(self.movement.pos.add(motion));
 }
 
 const Template = enum {
@@ -115,14 +98,14 @@ const Template = enum {
 };
 
 /// Init a new character with the given template. Deinitialize with `deinit()`.
-pub fn initTemplate(template: Template, current_map: *TileMap.RuntimeMap.CollisionMap, spawn_pos: Vector2) !Self {
+pub fn initTemplate(template: Template, spawn_pos: Vector2) !Self {
     return switch (template) {
         .Cerby => blk: {           
             const tex = try rl.loadTexture("assets/textures/characters_spritesheet.png");
             const animation = AnimationPlayer.init(
                 tex,
-                16,
-                16,
+                1,
+                1,
                 7
             );
 
@@ -131,15 +114,13 @@ pub fn initTemplate(template: Template, current_map: *TileMap.RuntimeMap.Collisi
                 100,
             );
             
-            const frame_rect = animation.getFrameRect();
             const collider = Collider{
                 .hitbox = Rectangle.init(
-                    spawn_pos.x,
-                    spawn_pos.y,
-                    frame_rect.width,
-                    frame_rect.height,
+                    0,
+                    3,
+                    16,
+                    13,
                 ),
-                .current_map = current_map,
             };
 
             var obj = try Self.init(
@@ -160,8 +141,8 @@ pub fn initTemplate(template: Template, current_map: *TileMap.RuntimeMap.Collisi
             const tex = try rl.loadTexture("assets/textures/characters_spritesheet.png");
             const animation = AnimationPlayer.init(
                 tex,
-                16,
-                16,
+                1,
+                1,
                 7
             );
 
@@ -171,8 +152,12 @@ pub fn initTemplate(template: Template, current_map: *TileMap.RuntimeMap.Collisi
             );
             
             const collider = Collider{
-                .hitbox = animation.getFrameRect(),
-                .current_map = current_map,
+                .hitbox = Rectangle.init(
+                    0,
+                    3,
+                    16,
+                    13,
+                ),
             };
 
             var obj = try Self.init(

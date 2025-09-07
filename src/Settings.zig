@@ -10,7 +10,7 @@ pub const tile_size: u8 = 16; // counts for x and y
 pub const chunk_size: u8 = 32; // counts for x and y
 pub const frame_time_cap: f32 = 0.05;
 
-pub const debug = false;
+pub const debug = true;
 
 /// Initializes all settings that can not be comptime evaluated
 pub fn init() void {

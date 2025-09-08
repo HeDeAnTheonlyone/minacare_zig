@@ -16,7 +16,6 @@ pub const Cerber = struct {
         if (input_vec.x < 0) self.animation.h_flip = false
         else if (input_vec .x > 0) self.animation.h_flip = true;
 
-        // if (input_vec.length() == 0) try self.animation.setAnimation("idle")
         if (input_vec.x > input_vec.y) {
             if (input_vec.y < 0) try self.animation.setAnimation("walk_up");
             if (input_vec.y > 0) try self.animation.setAnimation("walk_down");

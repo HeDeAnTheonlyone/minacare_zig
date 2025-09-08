@@ -62,9 +62,12 @@ fn debugDraw(self: *Self) void {
     }
 }
 
-pub fn updateTileRenderCache(self_: *anyopaque, player_pos: Vector2) !void {
+pub fn updateTileRenderCacheCallback(self_: *anyopaque, player_pos: Vector2) !void {
     const self: *Self = @alignCast(@ptrCast(self_));
-    
+    try self.updateTileRenderCache(player_pos);
+}
+
+pub fn updateTileRenderCache(self: *Self, player_pos: Vector2) !void {
     if (self.current_chunk.equals(getChunkCoordFromPos(player_pos))) return;
     self.current_chunk = getChunkCoordFromPos(player_pos);
 

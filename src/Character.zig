@@ -26,14 +26,17 @@ pub const VTable = struct {
     getInputVector: *const fn() Vector2,
 };
 
-pub fn update(self_: *anyopaque, delta: f32) !void {
+pub fn updateCallback(self_: *anyopaque, delta: f32) !void {
     const self: *Self = @alignCast(@ptrCast(self_));
+    try self.update(delta);
+}
 
+pub fn update(self: *Self, delta: f32) !void {
     if (rl.isKeyReleased(.t)) self.transformTo(try char_spawner.Cerber.spawn(self.movement.pos));
 
     try self.moveAndCollide(delta);
     try self.updateVisuals();
-    AnimationPlayer.update(&self.animation, delta);
+    self.animation.update(delta);
 }
 
 fn updateVisuals(self: *Self) !void {
@@ -105,5 +108,6 @@ fn moveAndCollide(self: *Self, delta: f32) !void {
 
 /// Changes the current character into a different character
 fn transformTo(self: *Self, char: Self) void {
+    
     self.* = char;
 }

@@ -45,8 +45,8 @@ pub fn main() !void {
         spawn_pos.scale(settings.tile_size)
     );
 
-    try cerby.movement.pos_changed_event.add(.{
-        .func = TileMap.updateTileRenderCache,
+    try cerby.movement.events.pos_changed.add(.{
+        .func = TileMap.updateTileRenderCacheCallback,
         .ctx = &game_state.map,
     });
 
@@ -61,7 +61,7 @@ pub fn main() !void {
     };
 
     try update_dispatcher.add(.{
-        .func = Character.update,
+        .func = Character.updateCallback,
         .ctx = &cerby,
     });
     
@@ -71,8 +71,6 @@ pub fn main() !void {
 
     while(!rl.windowShouldClose())
     {
-        if (rl.isKeyPressed(.f11)) rl.toggleFullscreen();
-
         // Logic ===> 
         const delta = std.math.clamp(
             rl.getFrameTime(),

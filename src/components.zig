@@ -64,9 +64,7 @@ pub const AnimationPlayer = struct {
     }
 
     /// The main update function that handles the whole process of this object 
-    pub fn update(self_: *anyopaque, delta: f32) void {
-        const self: *Self = @alignCast(@ptrCast(self_));
-
+    pub fn update(self: *Self, delta: f32) void {
         updateFrameTime(self, delta);
     }
 
@@ -170,7 +168,9 @@ pub const AnimationPlayer = struct {
 pub const Movement = struct {
     pos: Vector2,
     speed: f32,
-    pos_changed_event: event.Dispatcher(Vector2) = .init,
+    events: struct {
+        pos_changed: event.Dispatcher(Vector2),
+    },
 
     const Self = @This();
 
@@ -178,6 +178,7 @@ pub const Movement = struct {
         return .{
             .pos = pos,
             .speed = speed,
+            .events = .{ .pos_changed = .init },
         };
     }
 
@@ -187,7 +188,7 @@ pub const Movement = struct {
     }
 
     pub fn move(self: *Self, target_pos: Vector2, ) !void {
-        try self.pos_changed_event.dispatch(target_pos);
+        try self.events.pos_changed.dispatch(target_pos);
         self.pos = target_pos;
     }
 };
@@ -218,6 +219,24 @@ pub const Collider = struct {
     /// Checks in a hitbox adjusted tile field around the player for collisions.
     /// Returns true if collision ocured, otherwise, false.
     pub fn checkCollisionAtPos(self: *Self, pos: Vector2) bool {
+        const x_range = std.math.clamp(
+            @as(u8, @intFromFloat(self.hitbox.width / settings.tile_size)),
+            1,
+            std.math.maxInt(u8)
+        );
+        const y_range = std.math.clamp(
+            @as(u8, @intFromFloat(self.hitbox.height / settings.tile_size)),
+            1,
+            std.math.maxInt(u8)
+        );
+                
+        return checkCollisionAtPosManualSize(self, pos, x_range, y_range);
+    }
+
+    /// Checks in a given area of tiles around the player for collisions.
+    /// Returns true if collision ocured, otherwise, false.
+    pub fn checkCollisionAtPosManualSize(self: *Self, pos: Vector2, x_range: u8, y_range: u8) bool {
+        const center_pos = pos.add(self.getCenter());
         const positioned_hitbox = Rectangle.init(
             self.hitbox.x + pos.x,
             self.hitbox.y + pos.y,
@@ -225,23 +244,11 @@ pub const Collider = struct {
             self.hitbox.height,
         );
 
-        const center_pos = pos.add(self.getCenter());
-        const x_col_range = std.math.clamp(
-            @as(u8, @intFromFloat(self.hitbox.width / settings.tile_size)),
-            1,
-            std.math.maxInt(u8)
-        );
-        const y_col_range = std.math.clamp(
-            @as(u8, @intFromFloat(self.hitbox.height / settings.tile_size)),
-            1,
-            std.math.maxInt(u8)
-        );
-        
         var is_colliding = false;
-        for (0..x_col_range * 2 + 1) |xo| {
-            const x_offset = @as(i8, @intCast(xo)) - @as(i8, @intCast(x_col_range));
-            for (0..y_col_range * 2 + 1) |yo| {
-                const y_offset = @as(i8, @intCast(yo)) - @as(i8, @intCast(y_col_range));
+        for (0..x_range * 2 + 1) |xo| {
+            const x_offset = @as(i8, @intCast(xo)) - @as(i8, @intCast(x_range));
+            for (0..y_range * 2 + 1) |yo| {
+                const y_offset = @as(i8, @intCast(yo)) - @as(i8, @intCast(y_range));
 
                 const offset_pos = center_pos.add(Vector2.scale(
                     .{

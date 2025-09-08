@@ -13,8 +13,6 @@ const DummyError = error{};
 pub const AnimationPlayer = struct {
     texture: rl.Texture,
     frame_rect: Rectangle = undefined,
-    // frame_width: i32,
-    // frame_height: i32,
     v_tiles: u8,
     h_tiles: u8,
     sub_frame_counter: f32 = 0,
@@ -42,14 +40,12 @@ pub const AnimationPlayer = struct {
     };
 
     pub fn init(texture: rl.Texture2D, v_tiles: u8, h_tiles: u8, frame_time: f32) Self {
-        var obj = Self {
+        return .{
             .texture = texture,
             .v_tiles = v_tiles,
             .h_tiles = h_tiles,
             .frame_time  = frame_time,
         };
-        updateFrame(&obj);
-        return obj;
     }
 
     pub fn draw(self: Self, pos: rl.Vector2) void {
@@ -83,9 +79,11 @@ pub const AnimationPlayer = struct {
     }
 
     fn updateFrameTime(self: *Self, delta: f32) void {
-        if (self.current_animation.getFrameCount() == 1) return;
-        if (self.paused) return;
-        if (self.frame_time < 1) return;
+        if (
+            self.current_animation.getFrameCount() == 1 or
+            self.paused or
+            self.frame_time < 1
+        ) return;
 
         const base_framerate = 60;
         self.sub_frame_counter += base_framerate * delta;
@@ -96,7 +94,7 @@ pub const AnimationPlayer = struct {
     }
 
     fn updateFrame(self: *Self) void {
-        const columns = @divFloor(self.texture.width, self.getFrameWidth());
+        const columns = @divFloor(self.texture.width, settings.tile_size);
         const frame = self.current_animation.start_frame + self.current_frame;
 
         const column = @mod(frame, columns);
@@ -104,7 +102,7 @@ pub const AnimationPlayer = struct {
 
         self.frame_rect = Rectangle{
             .x = @floatFromInt(column * self.getFrameWidth()),
-            .y = @floatFromInt(row * self.getFrameHeight()),
+            .y = @floatFromInt(row * settings.tile_size),
             .width = @floatFromInt(if (self.h_flip) -self.getFrameWidth() else self.getFrameWidth()),
             .height = @floatFromInt(self.getFrameHeight()),
         };
@@ -122,6 +120,10 @@ pub const AnimationPlayer = struct {
         
         self.animations[self.animation_count] = anim;
         self.animation_count += 1;
+        if (self.animation_count == 1) {
+            self.current_animation = &self.animations[0];
+            self.updateFrame();
+        }
     }
 
     pub fn setAnimation(self: *Self, name: []const u8) !void { 

@@ -16,19 +16,19 @@ pub const Cerber = struct {
         if (input_vec.x < 0) self.animation.h_flip = false
         else if (input_vec .x > 0) self.animation.h_flip = true;
 
-        if (input_vec.length() == 0) try self.animation.setAnimation("idle")
-        else if (input_vec.x > input_vec.y) try self.animation.setAnimation("walk_side")
-        else {
-            if (input_vec.y > 0) try self.animation.setAnimation("walk_up")
-            else try self.animation.setAnimation("walk_down");
+        // if (input_vec.length() == 0) try self.animation.setAnimation("idle")
+        if (input_vec.x > input_vec.y) {
+            if (input_vec.y < 0) try self.animation.setAnimation("walk_up");
+            if (input_vec.y > 0) try self.animation.setAnimation("walk_down");
         }
+        else if (input_vec.x < input_vec.y) try self.animation.setAnimation("walk_side");
     }
 
     pub fn spawn(spawn_pos: Vector2) !Character {
         const animation = components.AnimationPlayer.init(
             game_state.character_spritesheet,
-            1,
-            1,
+            2,
+            2,
             7
         );
 
@@ -39,10 +39,10 @@ pub const Cerber = struct {
         
         const collider = components.Collider{
             .hitbox = Rectangle.init(
+                4,
                 0,
-                3,
-                16,
-                13,
+                32 - 8,
+                32,
             ),
         };
 
@@ -53,10 +53,10 @@ pub const Cerber = struct {
             .vtable = &vtable,
         };
 
-        try char.animation.addAnimation(.{ .name = "idle", .start_frame = 0, .end_frame = 7 });
-        try char.animation.addAnimation(.{ .name = "walk_up", .start_frame = 9, .end_frame = 16 });
-        try char.animation.addAnimation(.{ .name = "walk_down", .start_frame = 9, .end_frame = 16 });
-        try char.animation.addAnimation(.{ .name = "walk_side", .start_frame = 9, .end_frame = 16 });
+        try char.animation.addAnimation(.{ .name = "idle", .start_frame = 128, .end_frame = 128 });
+        try char.animation.addAnimation(.{ .name = "walk_up", .start_frame = 256, .end_frame = 256 });
+        try char.animation.addAnimation(.{ .name = "walk_down", .start_frame = 128, .end_frame = 128 });
+        try char.animation.addAnimation(.{ .name = "walk_side", .start_frame = 128, .end_frame = 128 });
 
         return char;
     }

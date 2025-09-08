@@ -29,7 +29,7 @@ pub const VTable = struct {
 pub fn update(self_: *anyopaque, delta: f32) !void {
     const self: *Self = @alignCast(@ptrCast(self_));
 
-    if (rl.isKeyReleased(.t)) self.transformTo(try char_spawner.Cerber.spawn(Vector2.zero()));
+    if (rl.isKeyReleased(.t)) self.transformTo(try char_spawner.Cerber.spawn(self.movement.pos));
 
     try self.moveAndCollide(delta);
     try self.updateVisuals();
@@ -105,7 +105,5 @@ fn moveAndCollide(self: *Self, delta: f32) !void {
 
 /// Changes the current character into a different character
 fn transformTo(self: *Self, char: Self) void {
-    self.animation = char.animation;
-    self.collider = char.collider;
-    self.vtable = char.vtable;
+    self.* = char;
 }

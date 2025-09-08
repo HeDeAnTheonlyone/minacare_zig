@@ -23,7 +23,7 @@ pub fn Dispatcher(comptime param_type: type) type {
         callback_count: u8,
 
         const Self = @This();
-        const max_callbacks = 255;
+        const max_callbacks = 128;
         pub const init = Self{.callback_list = undefined, .callback_count = 0};
 
         pub fn dispatch(self: *Self, param: param_type) anyerror!void {

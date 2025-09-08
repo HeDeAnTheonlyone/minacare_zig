@@ -16,14 +16,16 @@ comptime {
 }
 
 pub fn draw() void {
+    if (rl.isKeyPressed(.f3)) show_debug_menu = !show_debug_menu;
+    if (!show_debug_menu) return;
+    
+    rg.setFont(settings.font);
+    rg.setStyle( .default, .{ .default = .text_size }, 24);
     rg.setStyle(
         .default,
         .{ .default = .background_color },
         rl.Color.white.alpha(0.8).toInt(),
     );
-
-    rg.setFont(settings.font);
-    rg.setStyle( .default, .{ .default = .text_size }, 24);
 
     _ = rg.panel(
         .{

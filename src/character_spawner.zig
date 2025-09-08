@@ -8,10 +8,11 @@ const Rectangle = rl.Rectangle;
 pub const Cerber = struct {
     pub const vtable: Character.VTable = .{
         .updateVisuals = updateVisuals,
+        .getInputVector = components.input.getInputVector,
     };
 
-    fn updateVisuals(self: *Character) void {
-        const input_vec = components.input.getInputVector();
+    fn updateVisuals(self: *Character) !void {
+        const input_vec = self.vtable.getInputVector();
         if (input_vec.x < 0) self.animation.h_flip = false
         else if (input_vec .x > 0) self.animation.h_flip = true;
 
@@ -64,10 +65,11 @@ pub const Cerber = struct {
 pub const Cerby = struct {
     pub const vtable: Character.VTable = .{
         .updateVisuals = updateVisuals,
+        .getInputVector = components.input.getInputVector,
     };
 
     fn updateVisuals(self: *Character) !void {
-        const input_vec = components.input.getInputVector();
+        const input_vec = self.vtable.getInputVector();
         if (input_vec.x < 0) self.animation.h_flip = false
         else if (input_vec .x > 0) self.animation.h_flip = true;
 

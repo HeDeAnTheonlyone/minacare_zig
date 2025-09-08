@@ -5,6 +5,7 @@ const event = @import("event.zig");
 const drawer = @import("drawer.zig");
 const components = @import("components.zig");
 const TileMap = @import("TileMap.zig");
+const char_spawner = @import("character_spawner.zig");
 const Coordinates = TileMap.Coordinates;
 const AnimationPlayer = components.AnimationPlayer;
 const Movement = components.Movement;
@@ -22,10 +23,13 @@ const Self = @This();
 
 pub const VTable = struct {
     updateVisuals: *const fn(self: *Self) anyerror!void,
+    getInputVector: *const fn() Vector2,
 };
 
 pub fn update(self_: *anyopaque, delta: f32) !void {
     const self: *Self = @alignCast(@ptrCast(self_));
+
+    if (rl.isKeyReleased(.t)) self.transformTo(try char_spawner.Cerber.spawn(Vector2.zero()));
 
     try self.moveAndCollide(delta);
     try self.updateVisuals();
@@ -82,7 +86,7 @@ fn getCenter(self: *Self) Vector2 {
 }
 
 fn moveAndCollide(self: *Self, delta: f32) !void {
-    const input_vec = input.getInputVector();
+    const input_vec = self.vtable.getInputVector();
     if (input_vec.equals(Vector2.zero()) != 0) return;
 
     const motion= self.movement.getMotion(input_vec, delta);
@@ -97,4 +101,11 @@ fn moveAndCollide(self: *Self, delta: f32) !void {
     if (is_x_colliding) try self.movement.move(self.movement.pos.add(y_motion))
     else if (is_y_colliding) try self.movement.move(self.movement.pos.add(x_motion))
     else try self.movement.move(self.movement.pos.add(motion));
+}
+
+/// Changes the current character into a different character
+fn transformTo(self: *Self, char: Self) void {
+    self.animation = char.animation;
+    self.collider = char.collider;
+    self.vtable = char.vtable;
 }

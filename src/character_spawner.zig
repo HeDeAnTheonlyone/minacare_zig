@@ -38,9 +38,9 @@ pub const Cerber = struct {
         
         const collider = components.Collider{
             .hitbox = Rectangle.init(
-                4,
+                6,
                 0,
-                32 - 8,
+                32 - 12,
                 32,
             ),
         };
@@ -49,6 +49,7 @@ pub const Cerber = struct {
             .animation = animation,
             .movement = movement,
             .collider = collider,
+            .name = "cerber",
             .vtable = &vtable,
         };
 
@@ -102,6 +103,7 @@ pub const Cerby = struct {
                 .animation = animation,
                 .movement = movement,
                 .collider = collider,
+                .name = "cerby",
                 .vtable = &vtable,
             };
 

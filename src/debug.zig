@@ -5,6 +5,7 @@ const settings = @import("settings.zig");
 
 pub var show_debug_menu = false;
 
+pub var show_fps = true;
 pub var show_character_hitbox = false;
 pub var show_character_origin = false;
 pub var show_character_center = false;
@@ -18,7 +19,7 @@ comptime {
 pub fn draw() void {
     if (rl.isKeyPressed(.f3)) show_debug_menu = !show_debug_menu;
     if (!show_debug_menu) return;
-    
+
     rg.setFont(settings.font);
     rg.setStyle( .default, .{ .default = .text_size }, 24);
     rg.setStyle(
@@ -38,6 +39,7 @@ pub fn draw() void {
     );
 
     const boxes = [_]struct{[:0]const u8, *bool}{
+        .{"FPS", &show_fps},
         .{"Player Hitbox", &show_character_hitbox},
         .{"Player Origin", &show_character_origin},
         .{"Player Centerpoint", &show_character_center},

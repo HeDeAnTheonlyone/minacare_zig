@@ -9,7 +9,6 @@ const AnimationPlayer = @import("components.zig").AnimationPlayer;
 const Character = @import("Character.zig");
 const char_spawner = @import("character_spawner.zig");
 const components = @import("components.zig");
-const debug = @import("debug.zig");
 var debug_allocator = std.heap.DebugAllocator(.{}).init;
 
 pub fn main() !void {
@@ -41,29 +40,11 @@ pub fn main() !void {
         spawn_pos
     );
 
-    var cerby = try char_spawner.Cerby.spawn(
-        spawn_pos.scale(settings.tile_size)
+    var player = try @import("Player.zig").init(
+        try char_spawner.Cerby.spawn(
+            spawn_pos.scale(settings.tile_size)
+        )
     );
-
-    try cerby.movement.events.pos_changed.add(.{
-        .func = TileMap.updateTileRenderCacheCallback,
-        .ctx = &game_state.map,
-    });
-
-    var cam = rl.Camera2D{
-        .target = cerby.movement.pos.scale(settings.resolution_ratio), 
-        .offset = rl.Vector2{
-            .x = @as(f32, @floatFromInt(@divFloor(settings.window_width, 2))) - settings.tile_size / 2,
-            .y = @as(f32, @floatFromInt(@divFloor(settings.window_height, 2))) - settings.tile_size / 2,
-        },
-        .rotation = 0,
-        .zoom = 1,
-    };
-
-    try update_dispatcher.add(.{
-        .func = Character.updateCallback,
-        .ctx = &cerby,
-    });
     
     /////////////////////////////////////////////////////////////////
     // All game_state values have to be initialized at this point. //
@@ -77,8 +58,8 @@ pub fn main() !void {
             0,
             settings.frame_time_cap
         );
+        try player.update(delta);
         try update_dispatcher.dispatch(delta);
-        cam.target = cerby.movement.pos.scale(settings.resolution_ratio);
         // <=== Logic
         
         // Drawing ===>
@@ -86,19 +67,23 @@ pub fn main() !void {
         defer rl.endDrawing();
 
         // >>> World space
-        rl.beginMode2D(cam);
+        rl.beginMode2D(player.cam);
         
         rl.clearBackground(rl.Color.ray_white);
 
         game_state.map.draw();
-        cerby.draw();
-        if (@import("builtin").mode == .Debug) {
-            drawer.drawFps(cerby.movement.pos.subtractValue(8));
-        }
+        player.draw();
         rl.endMode2D();
 
         // >>> Screen space
-        debug.draw();
+        if (@import("builtin").mode == .Debug) {
+            const debug = @import("debug.zig");
+            debug.draw();
+            if (debug.show_fps) drawer.drawFps(.{
+                .x = 200,
+                .y = 10,
+            });
+        }
         // <=== Drawing
     }
 

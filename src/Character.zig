@@ -17,6 +17,7 @@ const Vector2 = rl.Vector2;
 animation: AnimationPlayer,
 movement: Movement,
 collider: Collider,
+name: []const u8,
 vtable: *const VTable,
 
 const Self = @This();
@@ -32,8 +33,6 @@ pub fn updateCallback(self_: *anyopaque, delta: f32) !void {
 }
 
 pub fn update(self: *Self, delta: f32) !void {
-    if (rl.isKeyReleased(.t)) self.transformTo(try char_spawner.Cerber.spawn(self.movement.pos));
-
     try self.moveAndCollide(delta);
     try self.updateVisuals();
     self.animation.update(delta);
@@ -82,7 +81,7 @@ pub fn debugDraw(self: *Self) void {
 }
 
 /// Returns the position of the center point
-fn getCenter(self: *Self) Vector2 {
+pub fn getCenter(self: *Self) Vector2 {
     return self.collider
         .getCenter()
         .add(self.movement.pos);
@@ -104,10 +103,4 @@ fn moveAndCollide(self: *Self, delta: f32) !void {
     if (is_x_colliding) try self.movement.move(self.movement.pos.add(y_motion))
     else if (is_y_colliding) try self.movement.move(self.movement.pos.add(x_motion))
     else try self.movement.move(self.movement.pos.add(motion));
-}
-
-/// Changes the current character into a different character
-fn transformTo(self: *Self, char: Self) void {
-    
-    self.* = char;
 }

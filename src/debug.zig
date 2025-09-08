@@ -10,6 +10,11 @@ pub var show_character_origin = false;
 pub var show_character_center = false;
 pub var show_tile_map_collisions = false;
 
+comptime {
+    if (@import("builtin").mode != .Debug)
+        @compileError("The debug module is not allowed in release builds.");
+}
+
 pub fn draw() void {
     rg.setStyle(
         .default,

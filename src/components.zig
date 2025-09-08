@@ -1,7 +1,6 @@
 const std = @import("std");
 const rl = @import("raylib");
 const settings = @import("settings.zig");
-const debug = @import("debug.zig");
 const game_state = @import("game_state.zig");
 const event = @import("event.zig");
 const drawer = @import("drawer.zig");

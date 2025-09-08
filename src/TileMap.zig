@@ -1,6 +1,5 @@
 const std = @import("std");
 const settings = @import("settings.zig");
-const debug = @import("debug.zig");
 const drawer = @import("drawer.zig");
 const rl = @import("raylib").raylib_module;
 const Vector2 = rl.Vector2;
@@ -50,6 +49,7 @@ pub fn draw(self: *Self) void {
 }
 
 fn debugDraw(self: *Self) void {
+    const debug = @import("debug.zig");
     if(debug.show_tile_map_collisions) {
         var iter = self.map_data.collision_map.collision_shapes.iterator();
         while (iter.next()) |collision_shape| {

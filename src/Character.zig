@@ -1,7 +1,6 @@
 const std = @import("std");
 const rl = @import("raylib");
 const settings = @import("settings.zig");
-const debug = @import("debug.zig");
 const event = @import("event.zig");
 const drawer = @import("drawer.zig");
 const components = @import("components.zig");
@@ -46,6 +45,7 @@ pub fn draw(self: *Self) void {
 }
 
 pub fn debugDraw(self: *Self) void {
+    const debug = @import("debug.zig");
     if (debug.show_character_hitbox) {
         drawer.drawRectOutline(
             Rectangle.init(

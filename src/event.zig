@@ -33,7 +33,7 @@ pub fn Dispatcher(comptime param_type: type) type {
         }
 
         pub fn add(self: *Self, callback: Callback(param_type)) anyerror!void {
-            if (self.callback_count == max_callbacks) return error.MaxCallbacksAlreadyReached;
+            if (self.callback_count == max_callbacks) return error.OutOfMemory;
             self.callback_list[self.callback_count] = callback;
             self.callback_count += 1;
         }

@@ -11,12 +11,11 @@ map_data: RuntimeMap,
 /// 2 layers * 9 chunks * 32 tiles horizontal * 32 tiles vertical
 tile_render_cache: [2 * 9 * 32 * 32]TileDrawData = undefined,
 current_chunk: ChunkCoordinates,
-counter: u32 = 0,
+counter: f32 = 0,
 sub_frame_counter: f32 = 0,
 
 const Self = @This();
 const tile_spritesheet_path = "assets/textures/tile_spritesheet.png";
-const frame_time: u8 = 5;
 
 /// Deinitialize with `deinit()`.
 pub fn init(allocator: std.mem.Allocator, map_name: []const u8, initial_render_position: Vector2) !Self {
@@ -41,10 +40,7 @@ pub fn update(self: *Self, delta: f32) void {
 
 fn updateCounter(self: *Self, delta: f32) void {
     const base_framerate = 60;
-    self.sub_frame_counter += base_framerate * delta;
-    if (self.sub_frame_counter < frame_time) return;
-    self.sub_frame_counter = 0;
-    self.counter += 1;
+    self.counter += base_framerate * delta;
 }
 
 pub fn deinit(self: *Self, allocator: std.mem.Allocator) void {
@@ -55,11 +51,21 @@ pub fn deinit(self: *Self, allocator: std.mem.Allocator) void {
 pub fn draw(self: *Self) void {
     for (self.tile_render_cache) |draw_data| {
         var tmp_source_rect = draw_data.source_rect;
-        if (draw_data.properties != null and draw_data.properties.?.frames != null) {
-            tmp_source_rect.shift(
-                .x,
-                @floatFromInt(settings.tile_size * @rem(self.counter, draw_data.properties.?.frames.?))
-            );
+        if (
+            draw_data.properties != null and
+            draw_data.properties.?.frames != null and
+            draw_data.properties.?.frame_time != null
+        ) {
+            const prop = draw_data.properties.?;
+            
+            const sub_frame = @as(u32, @intFromFloat(@divFloor(
+                self.counter,
+                @as(f32, @floatFromInt(prop.frame_time.?))
+            )));
+            const frame = @rem(sub_frame, prop.frames.?);
+            const shift = frame * settings.tile_size;
+
+            tmp_source_rect.shift(.x, @floatFromInt(shift));
         }
 
         drawer.drawTexturePro(
@@ -279,7 +285,8 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
 
             pub const TileProperties = struct {
                 id: i32,
-                frames: ?u8 = null,
+                frames: ?u32 = null,
+                frame_time: ?u32 = null,
             };
 
             pub const TileLayer = struct {

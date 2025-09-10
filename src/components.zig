@@ -136,7 +136,7 @@ pub const AnimationPlayer = struct {
         };
         self.current_frame = 0;
         self.sub_frame_counter = 0;
-        updateFrame(self);
+        self.updateFrame();
     }
 
     /// Sets and updates the animations frame
@@ -144,7 +144,13 @@ pub const AnimationPlayer = struct {
         self.current_frame = frame;
         const total_frames = self.animations[self.current_animation].getFrameCount();
         if (self.current_frame >= total_frames) self.current_frame = 0;
-        updateFrame(self);
+        self.updateFrame();
+    }
+
+    pub fn setFlip(self: *Self, is_flipped: bool) void {
+        if (is_flipped == self.h_flip) return;
+        self.h_flip = is_flipped;
+        self.updateFrame();
     }
 
     pub fn getFrameRect(self: *const Self) Rectangle {
@@ -258,7 +264,7 @@ pub const Collider = struct {
                     settings.tile_size
                 ));
 
-                const collision_shape = game_state.map.getTileCollision(offset_pos) orelse continue;
+                const collision_shape = game_state.map.map_data.collision_map.getTileCollision(offset_pos) orelse continue;
                 is_colliding = is_colliding or positioned_hitbox.checkCollision(collision_shape);
             }
         }

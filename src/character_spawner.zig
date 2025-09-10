@@ -13,14 +13,20 @@ pub const Cerber = struct {
 
     fn updateVisuals(self: *Character) !void {
         const input_vec = self.vtable.getInputVector();
-        if (input_vec.x < 0) self.animation.h_flip = false
-        else if (input_vec .x > 0) self.animation.h_flip = true;
 
-        if (input_vec.x > input_vec.y) {
+        if (@abs(input_vec.x) < @abs(input_vec.y)) {
             if (input_vec.y < 0) try self.animation.setAnimation("walk_up");
             if (input_vec.y > 0) try self.animation.setAnimation("walk_down");
+
+            self.animation.setFlip(false);
         }
-        else if (input_vec.x < input_vec.y) try self.animation.setAnimation("walk_side");
+        
+        else if (@abs(input_vec.x) > @abs(input_vec.y)) {
+            try self.animation.setAnimation("walk_side");
+            
+            if (input_vec.x < 0) self.animation.setFlip(false)
+            else if (input_vec .x > 0) self.animation.setFlip(true);
+        }
     }
 
     pub fn spawn(spawn_pos: Vector2) !Character {
@@ -38,9 +44,9 @@ pub const Cerber = struct {
         
         const collider = components.Collider{
             .hitbox = Rectangle.init(
-                6,
+                4,
                 0,
-                32 - 12,
+                22,
                 32,
             ),
         };
@@ -56,7 +62,7 @@ pub const Cerber = struct {
         try char.animation.addAnimation(.{ .name = "idle", .start_frame = 128, .end_frame = 128 });
         try char.animation.addAnimation(.{ .name = "walk_up", .start_frame = 256, .end_frame = 256 });
         try char.animation.addAnimation(.{ .name = "walk_down", .start_frame = 128, .end_frame = 128 });
-        try char.animation.addAnimation(.{ .name = "walk_side", .start_frame = 128, .end_frame = 128 });
+        try char.animation.addAnimation(.{ .name = "walk_side", .start_frame = 384, .end_frame = 384 });
 
         return char;
     }

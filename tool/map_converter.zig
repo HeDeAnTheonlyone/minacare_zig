@@ -8,6 +8,7 @@ const tiled_types = struct {
     const MapData = struct {
         allocator: std.mem.Allocator,
         tile_layers: []TileLayer,
+        special_tile_list: *SpecialTileList,
         collision_layer: *CollisionLayer,
         marker_layer: *MarkerLayer,
 
@@ -15,10 +16,25 @@ const tiled_types = struct {
             return MapData{
                 .allocator = allocator,
                 .tile_layers = try allocator.alloc(TileLayer, layer_count),
+                .special_tile_list = try allocator.create(SpecialTileList),
                 .marker_layer = try allocator.create(MarkerLayer),
                 .collision_layer = try allocator.create(CollisionLayer),
             };
         }
+    };
+
+    const SpecialTileList = struct {
+        tiles: []TilePropertyList,
+    };
+
+    const TilePropertyList = struct {
+        id: u32,
+        properties: []TileProperty,
+    };
+
+    const TileProperty = struct {
+        value: u8,
+        name: []const u8,
     };
 
     const TileChunk = struct {
@@ -69,6 +85,7 @@ pub fn start() !void {
 
     var maps_dir = try std.fs.cwd().openDir("assets/maps", .{});
     defer maps_dir.close();
+
     var maps_iter = dev_maps_dir.iterate();
 
     while (try maps_iter.next()) |m| {
@@ -81,7 +98,7 @@ pub fn start() !void {
                 _ = try std.Io.Reader.streamRemaining(&file_reader.interface, &json_str.writer);
 
                 const map_data = try parseData(arena_allocator, json_str.written());
-                const converted_map_data = try covertMap(arena_allocator, map_data);
+                const converted_map_data = try convertMap(arena_allocator, map_data);
 
                 const converted_map_file = try maps_dir.createFile(
                     try std.mem.concat(
@@ -95,7 +112,11 @@ pub fn start() !void {
 
                 var file_writer = converted_map_file.writer(&.{});
 
-                try std.zon.stringify.serialize(converted_map_data, .{.whitespace = false}, &file_writer.interface);
+                try std.zon.stringify.serialize(
+                    converted_map_data,
+                    .{.whitespace = false},
+                    &file_writer.interface
+                );
             },
             else => continue,
         }
@@ -111,12 +132,23 @@ fn parseData(allocator: std.mem.Allocator, json_str: []const u8) !tiled_types.Ma
         .{}
     );
     
-    const p_layers = parsed.value.object.get("layers").?;
+    const p_layers = parsed.value.object.get("layers").?.array.items;
 
-    var map_data = try tiled_types.MapData.init(allocator,p_layers.array.items.len - 2);
+    var map_data = try tiled_types.MapData.init(
+        allocator,
+        p_layers.len - 2,
+    );
+    
+    try extractRelevantMapData(
+        tiled_types.SpecialTileList,
+        allocator,
+        parsed.value.object.get("tilesets").?.array.items[0],
+        map_data.special_tile_list,
+    );
+    
     var tile_layer_count: u8 = 0;
 
-    for (p_layers.array.items) |entry| {
+    for (p_layers) |entry| {
         const @"type" = entry.object.get("type").?.string;
         
         if (std.mem.eql(u8, @"type", "tilelayer")) {
@@ -158,12 +190,12 @@ fn extractRelevantMapData(T: type, allocator: std.mem.Allocator, json_value: std
         T,
         allocator,
         json_value,
-        .{.ignore_unknown_fields = true}
+        .{.ignore_unknown_fields = true, }
     );
     ptr.* = parsed.value;
 }
 
-fn covertMap(allocator: std.mem.Allocator, map_data: tiled_types.MapData) !Map {
+fn convertMap(allocator: std.mem.Allocator, map_data: tiled_types.MapData) !Map {
     return Map{
         .tile_map = .{
             .layers = outer_blk: {
@@ -176,7 +208,13 @@ fn covertMap(allocator: std.mem.Allocator, map_data: tiled_types.MapData) !Map {
                                 var chunks = try allocator.alloc(Map.TileMap.TileLayer.TileChunk, tile_layer.chunks.len);
                                 for (0..tile_layer.chunks.len) |j| {
                                     chunks[j] = Map.TileMap.TileLayer.TileChunk{
-                                        .tile_ids = tile_layer.chunks[j].data,
+                                        .tile_ids = blk: {
+                                            const list: []i32 = @constCast(@as([]const i32, @alignCast(@ptrCast(tile_layer.chunks[j].data))));
+                                            for (list) |*id| {
+                                                id.* -= 1;
+                                            }
+                                            break :blk list;
+                                        },
                                         .x = tile_layer.chunks[j].x,
                                         .y = tile_layer.chunks[j].y,
                                     };
@@ -193,6 +231,26 @@ fn covertMap(allocator: std.mem.Allocator, map_data: tiled_types.MapData) !Map {
                     };
                 }
                 break :outer_blk layers;
+            },
+            .tile_properties = outer_blk: {
+                const tiles = map_data.special_tile_list.tiles;
+                var properties = try allocator.alloc(Map.TileMap.TileProperties, tiles.len);
+
+                for(0..tiles.len) |i| {
+                    properties[i] = inner_blk: {
+                        var property = Map.TileMap.TileProperties{
+                            .id = @intCast(tiles[i].id),
+                        };
+                        for (tiles[i].properties) |p| {
+                            inline for (comptime std.meta.fieldNames(Map.TileMap.TileProperties)) |field| {
+                                if (std.mem.eql(u8, field, p.name))
+                                @field(property, field) = p.value;
+                            }
+                        }
+                        break :inner_blk property;
+                    };
+                }
+                break :outer_blk properties;
             }
         },
         .collision_map = .{

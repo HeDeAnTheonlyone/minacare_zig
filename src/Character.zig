@@ -58,7 +58,7 @@ pub fn debugDraw(self: *Self) void {
                 self.collider.hitbox.x + self.movement.pos.x,
                 self.collider.hitbox.y + self.movement.pos.y,
                 self.collider.hitbox.width,
-                self.collider.hitbox.width,
+                self.collider.hitbox.height,
             ),
             5,
             .red

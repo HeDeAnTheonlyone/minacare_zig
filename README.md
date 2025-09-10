@@ -7,3 +7,7 @@ There are 3 different positional "systems":
 1. native positions (Used by internal calculations)
 2. tile coordinates (1. but divided by 16)
 3. chunk coordinates (2. but divided by 32)
+
+The function names `update` and `draw` are reserved for a structs main uopdate function and draw functions. They should not be used for something else.
+
+Sprites of animated tiles need to be all next to each other (no line wrapping). The first tile of the animation needs to have a `frames` custom data attached.

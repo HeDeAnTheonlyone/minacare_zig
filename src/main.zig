@@ -58,6 +58,7 @@ pub fn main() !void {
             0,
             settings.frame_time_cap
         );
+        game_state.map.update(delta);
         try player.update(delta);
         try update_dispatcher.dispatch(delta);
         // <=== Logic

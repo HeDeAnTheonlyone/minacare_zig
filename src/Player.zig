@@ -53,13 +53,10 @@ pub fn draw(self: *Self) void {
 fn transform(self: *Self) !void {
     var trans =
         if (std.mem.eql(u8, self.char.name, "cerby")) try char_spawner.Cerber.spawn(self.char.movement.pos)
-        else try char_spawner.Cerby.spawn(self.char.movement.pos); 
+        else try char_spawner.Cerby.spawn(self.char.movement.pos);
 
     // TODO Fix offsetting the player for correct transformation position
-    trans.movement.pos = trans.movement.pos.add(.{
-        .x = (self.char.collider.hitbox.width - trans.collider.hitbox.width) / 2,
-        .y = (self.char.collider.hitbox.height - trans.collider.hitbox.height) / 2,
-    });
+    trans.movement.pos = trans.movement.pos.add(self.char.animation.getCenter().subtract(trans.animation.getCenter()));
 
     if (trans.collider.checkCollisionAtPos(trans.movement.pos)) return;
 

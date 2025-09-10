@@ -11,19 +11,40 @@ map_data: RuntimeMap,
 /// 2 layers * 9 chunks * 32 tiles horizontal * 32 tiles vertical
 tile_render_cache: [2 * 9 * 32 * 32]TileDrawData = undefined,
 current_chunk: ChunkCoordinates,
+counter: u32 = 0,
+sub_frame_counter: f32 = 0,
 
 const Self = @This();
 const tile_spritesheet_path = "assets/textures/tile_spritesheet.png";
+const frame_time: u8 = 5;
 
 /// Deinitialize with `deinit()`.
 pub fn init(allocator: std.mem.Allocator, map_name: []const u8, initial_render_position: Vector2) !Self {
     var  map = Self{
         .texture = try rl.loadTexture(tile_spritesheet_path),
         .map_data = try RuntimeMap.loadFromFile(allocator, map_name),
+        // 1 is added to make it different from the players chunk coordinates and trigger the cache update function
         .current_chunk = getChunkCoordFromPos(initial_render_position).addValue(1),
     };
     try Self.updateTileRenderCache(&map, initial_render_position);
     return map;
+}
+
+pub fn updateCallback(self_: *anyopaque, delta: f32) !void {
+    const self: Self = @alignCast(@ptrCast(self_));
+    self.update(delta);
+}
+
+pub fn update(self: *Self, delta: f32) void {
+    self.updateCounter(delta);
+}
+
+fn updateCounter(self: *Self, delta: f32) void {
+    const base_framerate = 60;
+    self.sub_frame_counter += base_framerate * delta;
+    if (self.sub_frame_counter < frame_time) return;
+    self.sub_frame_counter = 0;
+    self.counter += 1;
 }
 
 pub fn deinit(self: *Self, allocator: std.mem.Allocator) void {
@@ -33,9 +54,17 @@ pub fn deinit(self: *Self, allocator: std.mem.Allocator) void {
 
 pub fn draw(self: *Self) void {
     for (self.tile_render_cache) |draw_data| {
+        var tmp_source_rect = draw_data.source_rect;
+        if (draw_data.properties != null and draw_data.properties.?.frames != null) {
+            tmp_source_rect.shift(
+                .x,
+                @floatFromInt(settings.tile_size * @rem(self.counter, draw_data.properties.?.frames.?))
+            );
+        }
+
         drawer.drawTexturePro(
             self.texture,
-            draw_data.source_rect,
+            tmp_source_rect,
             draw_data.dest_rect,
             Vector2.zero(),
             0,
@@ -94,14 +123,11 @@ pub fn updateTileRenderCache(self: *Self, player_pos: Vector2) !void {
                     else continue;
 
             for (0..chunk.tile_ids.len) |i| {
-                // offset id back by one to make transparent tiles use -1 (invalid tile id so it can be skipped)
-                const id = @as(i32, @intCast(chunk.tile_ids[i])) - 1;
-
                 const tile_source_rect =
-                    if (id == -1) continue
+                    if (chunk.tile_ids[i] == -1) continue
                     else Rectangle.init(
-                        @floatFromInt(@mod(id * settings.tile_size, self.texture.width)),
-                        @floatFromInt(@divFloor(id * settings.tile_size, self.texture.width) * settings.tile_size),
+                        @floatFromInt(@mod(chunk.tile_ids[i] * settings.tile_size, self.texture.width)),
+                        @floatFromInt(@divFloor(chunk.tile_ids[i] * settings.tile_size, self.texture.width) * settings.tile_size),
                         settings.tile_size,
                         settings.tile_size
                     );
@@ -120,6 +146,7 @@ pub fn updateTileRenderCache(self: *Self, player_pos: Vector2) !void {
                 self.tile_render_cache[index] = .{
                     .source_rect = tile_source_rect,
                     .dest_rect = tile_dest_rect,
+                    .properties = self.map_data.tile_map.tile_properties.getPtr(chunk.tile_ids[i]),
                 };
                 index += 1;
             }
@@ -127,10 +154,11 @@ pub fn updateTileRenderCache(self: *Self, player_pos: Vector2) !void {
     }
 }
 
-pub fn getTileCollision(self: *Self, player_pos: Vector2) ?Rectangle {
-    const coords = Coordinates.fromPosition(player_pos);
-    return self.map_data.collision_map.collision_shapes.get(coords);
-}
+const TileDrawData = struct {
+    source_rect: Rectangle,
+    dest_rect: Rectangle,
+    properties: ?*RuntimeMap.TileMap.TileProperties,
+};
 
 /// Chunk coordinates are the position divided by the tile size and the chunk size.
 pub fn getChunkCoordFromPos(native_pos: Vector2) ChunkCoordinates {
@@ -138,11 +166,6 @@ pub fn getChunkCoordFromPos(native_pos: Vector2) ChunkCoordinates {
         .fromPosition(native_pos)
         .divideScalar(settings.chunk_size);
 }
-
-const TileDrawData = struct {
-    source_rect: Rectangle,
-    dest_rect: Rectangle,
-};
 
 pub const Coordinates = CoordinatesDef();
 pub const ChunkCoordinates = CoordinatesDef();
@@ -249,11 +272,20 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
 
         pub const TileMap = struct {
             layers: []TileLayer,
+            tile_properties: switch (value_container) {
+                .Array => []TileProperties,
+                .HashMap =>std.AutoHashMapUnmanaged(i32, TileProperties),
+            },
+
+            pub const TileProperties = struct {
+                id: i32,
+                frames: ?u8 = null,
+            };
 
             pub const TileLayer = struct {
                 chunks: switch (value_container) {
                     .Array => []TileChunk,
-                    .HashMap => std.AutoHashMapUnmanaged(Coordinates, TileChunk)
+                    .HashMap => std.AutoHashMapUnmanaged(Coordinates, TileChunk),
                 },
                 x: i32,
                 y: i32,
@@ -262,7 +294,7 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
                 name: []const u8,
 
                 pub const TileChunk = struct {
-                    tile_ids: []const u32,
+                    tile_ids: []const i32,
                     x: i32, // Coordinate not position
                     y: i32, // Coordinate not position
                     
@@ -279,7 +311,7 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
                         return .{
                             .x = coords.x * settings.chunk_size,
                             .y = coords.y * settings.chunk_size,
-                            .tile_ids = &[_]u32{64} ** 1024,
+                            .tile_ids = &[_]i32{63} ** 1024,
                         };
                     }   
                 };
@@ -291,6 +323,11 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
                 .Array => []Rectangle,
                 .HashMap => std.AutoHashMapUnmanaged(Coordinates, Rectangle),
             },
+
+            pub fn getTileCollision(self: *CollisionMap, player_pos: Vector2) ?Rectangle {
+                const coords = Coordinates.fromPosition(player_pos);
+                return self.collision_shapes.get(coords);
+            }
         };
 
         pub const Marker = struct {
@@ -352,6 +389,8 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
                                 Coordinates,
                                 RuntimeMap.TileMap.TileLayer.TileChunk
                             ).empty;
+                            try chunk_map.ensureTotalCapacity(allocator, 128);
+                            // TODO maybe increase as time goes on. -------------------------/\
                             for (stored_map.tile_map.layers[i].chunks) |chunk| {
                                 try chunk_map.put(
                                     allocator,
@@ -366,7 +405,23 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
                             tile_layers[i].chunks = chunk_map;
                         }
                         break :blk tile_layers;
-                    }
+                    },
+                    .tile_properties = blk: {
+                        var tile_property_list = std.AutoHashMapUnmanaged(
+                            i32,
+                            TileMap.TileProperties
+                        ).empty;
+                        try tile_property_list.ensureTotalCapacity(allocator, 128);
+                        // TODO maybe increase as time goes on. ---------------/\
+                        for (stored_map.tile_map.tile_properties) |prop| {
+                            try tile_property_list.put(
+                                allocator,
+                                prop.id,
+                                prop,
+                            );
+                        }
+                        break :blk tile_property_list;
+                    },
                 },
                 .collision_map = RuntimeMap.CollisionMap{
                     .collision_shapes = blk: {
@@ -384,7 +439,7 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
                                 @bitCast(rect));
                         }
                         break :blk collisions;
-                    }
+                    },
                 },
                 .markers = stored_map.markers,
             };

@@ -1,9 +1,12 @@
 const rl = @import("raylib");
+const settings = @import("settings.zig");
 const game_state = @import("game_state.zig");
+const TileMap = @import("TileMap.zig");
 const Character = @import("Character.zig");
 const components = @import("components.zig");
 const Vector2 = rl.Vector2;
 const Rectangle = rl.Rectangle;
+const Location = TileMap.Location;
 
 pub const Cerber = struct {
     pub const vtable: Character.VTable = .{
@@ -29,17 +32,12 @@ pub const Cerber = struct {
         }
     }
 
-    pub fn spawn(spawn_pos: Vector2) !Character {
+    pub fn spawn(spawn_location: Location) !Character {
         const animation = components.AnimationPlayer.init(
-            game_state.character_spritesheet,
+            &game_state.character_spritesheet,
             2,
             2,
             7
-        );
-
-        const movement = components.Movement.init(
-            spawn_pos,
-            100,
         );
         
         const collider = components.Collider{
@@ -50,6 +48,14 @@ pub const Cerber = struct {
                 32,
             ),
         };
+
+        const movement = components.Movement.init(
+            blk: {
+                    var pos: Vector2 =  spawn_location.asPos();
+                    break :blk pos.add(collider.getCenter());
+                },
+            100,
+        );
 
         var char = Character{
             .animation = animation,
@@ -83,17 +89,12 @@ pub const Cerby = struct {
         else try self.animation.setAnimation("walk");
     }
 
-    pub fn spawn(spawn_pos: Vector2) !Character {
+    pub fn spawn(spawn_location: Location) !Character {
             const animation = components.AnimationPlayer.init(
-                game_state.character_spritesheet,
+                &game_state.character_spritesheet,
                 1,
                 1,
                 7
-            );
-
-            const movement = components.Movement.init(
-                spawn_pos,
-                100,
             );
             
             const collider = components.Collider{
@@ -104,6 +105,14 @@ pub const Cerby = struct {
                     13,
                 ),
             };
+
+            const movement = components.Movement.init(
+                blk: {
+                    var pos: Vector2 = spawn_location.asPos();
+                    break :blk pos.add(collider.getCenter());
+                },
+                100,
+            );
 
             var char = Character{
                 .animation = animation,

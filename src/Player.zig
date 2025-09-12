@@ -13,7 +13,7 @@ cam: rl.Camera2D,
 const Self = @This();
 
 pub fn init(char: Character) !Self {
-    var c = Self{
+    return .{
         .char = char,
         .cam = rl.Camera2D{
             .target = undefined,
@@ -25,13 +25,6 @@ pub fn init(char: Character) !Self {
             .zoom = 1,
         },
     };
-    
-    try c.char.movement.events.pos_changed.add(.{
-        .func = @import("TileMap.zig").updateTileRenderCacheCallback,
-        .ctx = &game_state.map,
-    });
-
-    return c;
 }
 
 pub fn updateCallback(self_: *anyopaque, delta: f32) !void {
@@ -52,11 +45,15 @@ pub fn draw(self: *Self) void {
 /// Transforms between Cerber and Cerby
 fn transform(self: *Self) !void {
     var trans =
-        if (std.mem.eql(u8, self.char.name, "cerby")) try char_spawner.Cerber.spawn(self.char.movement.pos)
-        else try char_spawner.Cerby.spawn(self.char.movement.pos);
+        if (std.mem.eql(u8, self.char.name, "cerby")) try char_spawner.Cerber.spawn(.{ .position = self.char.movement.pos })
+        else try char_spawner.Cerby.spawn(.{ .position = self.char.movement.pos});
 
     // TODO Fix offsetting the player for correct transformation position
-    trans.movement.pos = trans.movement.pos.add(self.char.animation.getCenter().subtract(trans.animation.getCenter()));
+    trans.movement.pos = trans.movement.pos.add(
+        self.char.animation
+            .getCenter()
+            .subtract(trans.animation.getCenter())
+    );
 
     if (trans.collider.checkCollisionAtPos(trans.movement.pos)) return;
 

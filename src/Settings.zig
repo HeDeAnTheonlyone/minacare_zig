@@ -8,7 +8,7 @@ pub var window_width: i32 = 1920;
 pub var window_height:i32 = 1080;
 /// Only use this value in display/drawing context.
 pub var resolution_ratio: f32 = undefined;
-pub var target_fps: i32 = 170;
+pub var target_fps: i32 = 100000;
 pub const tile_size: u8 = 16; // counts for x and y
 pub const chunk_size: u8 = 32; // counts for x and y
 pub const frame_time_cap: f32 = 0.05;
@@ -28,7 +28,7 @@ pub fn deinit() void {
 
 pub fn getResolutionRatio() f32 {
     // The compensation value is to make slightly change the final multiplier to make the look right.
-    const compensation: f32 = 1.5; 
+    const compensation: f32 = 1.5;
     return @as(f32, @floatFromInt(window_width)) / @as(f32, @floatFromInt(native_width)) * compensation;
 }
 

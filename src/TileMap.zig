@@ -1,46 +1,25 @@
 const std = @import("std");
 const settings = @import("settings.zig");
+const game_state = @import("game_state.zig");
 const drawer = @import("drawer.zig");
 const rl = @import("raylib").raylib_module;
 const Vector2 = rl.Vector2;
 const Rectangle = rl.Rectangle;
 
-/// Texture should be the same regardless what world map is loaded as all tiles should ideally be in the same file.
-texture: rl.Texture2D,
-map_data: RuntimeMap,
+texture: *rl.Texture2D,
+map_data: RuntimeMap = undefined,
 /// 2 layers * 9 chunks * 32 tiles horizontal * 32 tiles vertical
-tile_render_cache: [2 * 9 * 32 * 32]TileDrawData = undefined,
-current_chunk: ChunkCoordinates,
-counter: f32 = 0,
+tile_render_cache: [2 * 9 * 32 * 32]?TileDrawData = @splat(null),
+current_chunk: ChunkCoordinates = Coordinates{.x = 0, .y = 0},
 sub_frame_counter: f32 = 0,
 
 const Self = @This();
-const tile_spritesheet_path = "assets/textures/tile_spritesheet.png";
 
 /// Deinitialize with `deinit()`.
-pub fn init(allocator: std.mem.Allocator, map_name: []const u8, initial_render_position: Vector2) !Self {
-    var  map = Self{
-        .texture = try rl.loadTexture(tile_spritesheet_path),
-        .map_data = try RuntimeMap.loadFromFile(allocator, map_name),
-        // 1 is added to make it different from the players chunk coordinates and trigger the cache update function
-        .current_chunk = getChunkCoordFromPos(initial_render_position).addValue(1),
+pub fn init(texture: *rl.Texture2D) Self {
+    return .{
+        .texture = texture,
     };
-    try Self.updateTileRenderCache(&map, initial_render_position);
-    return map;
-}
-
-pub fn updateCallback(self_: *anyopaque, delta: f32) !void {
-    const self: Self = @alignCast(@ptrCast(self_));
-    self.update(delta);
-}
-
-pub fn update(self: *Self, delta: f32) void {
-    self.updateCounter(delta);
-}
-
-fn updateCounter(self: *Self, delta: f32) void {
-    const base_framerate = 60;
-    self.counter += base_framerate * delta;
 }
 
 pub fn deinit(self: *Self, allocator: std.mem.Allocator) void {
@@ -48,8 +27,14 @@ pub fn deinit(self: *Self, allocator: std.mem.Allocator) void {
     self.map_data.deinit(allocator);
 }
 
+pub fn drawCallback(self_: *anyopaque, _: void) void {
+    const self: Self = @alignCast(@ptrCast(self_));
+    self.draw();
+} 
+
 pub fn draw(self: *Self) void {
-    for (self.tile_render_cache) |draw_data| {
+    for (self.tile_render_cache) |opt_draw_data| {
+        const draw_data = opt_draw_data orelse continue;
         var tmp_source_rect = draw_data.source_rect;
         if (
             draw_data.properties != null and
@@ -59,7 +44,7 @@ pub fn draw(self: *Self) void {
             const prop = draw_data.properties.?;
             
             const sub_frame = @as(u32, @intFromFloat(@divFloor(
-                self.counter,
+                game_state.counter * 60, // 60 is the base reference framerate
                 @as(f32, @floatFromInt(prop.frame_time.?))
             )));
             const frame = @rem(sub_frame, prop.frames.?);
@@ -69,7 +54,7 @@ pub fn draw(self: *Self) void {
         }
 
         drawer.drawTexturePro(
-            self.texture,
+            self.texture.*,
             tmp_source_rect,
             draw_data.dest_rect,
             Vector2.zero(),
@@ -95,6 +80,12 @@ fn debugDraw(self: *Self) void {
             );
         }
     }
+}
+
+/// Deinits old map and load new map. `map_name` refers to the file name without the extension.
+pub fn loadMap(self: *Self, allocator: std.mem.Allocator, map_name: []const u8) !void {
+    self.map_data.deinit(allocator);
+    self.map_data = try RuntimeMap.loadFromFile(allocator, map_name);
 }
 
 pub fn updateTileRenderCacheCallback(self_: *anyopaque, player_pos: Vector2) !void {
@@ -175,6 +166,27 @@ pub fn getChunkCoordFromPos(native_pos: Vector2) ChunkCoordinates {
 
 pub const Coordinates = CoordinatesDef();
 pub const ChunkCoordinates = CoordinatesDef();
+
+pub const Location = union(enum) {
+    position: Vector2,
+    coordinates: Coordinates,
+
+    /// If Vector: return value.
+    /// 
+    /// If Coordinates: calculate pos and then return value.
+    pub fn asPos(loc: Location) Vector2 {
+        return switch (loc) {
+            .coordinates => |l| blk: {
+                const coord = l.multiplyScalar(settings.tile_size);
+                break :blk Vector2{
+                    .x = @floatFromInt(coord.x),
+                    .y = @floatFromInt(coord.y),
+                };
+            },
+            .position => |l| l,
+        };
+    }
+};
 
 pub fn CoordinatesDef() type {
     return struct {
@@ -351,12 +363,17 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
 
         pub fn deinit(self: *RuntimeMap, allocator: std.mem.Allocator) void {
             self.collision_map.collision_shapes.deinit(allocator);
+            self.tile_map.tile_properties.deinit(allocator);
+            for (self.tile_map.layers) |*layer| {
+                layer.chunks.deinit(allocator);
+            }
+            allocator.free(self.tile_map.layers);
         }
 
         /// Load only the internal map data and not the texture.
         /// File name refers to only the file name without the extension and not the whole path.
         /// Deinitialize with `deinit()`.
-        pub fn loadFromFile(allocator: std.mem.Allocator, file_name: []const u8) !RuntimeMap {
+        fn loadFromFile(allocator: std.mem.Allocator, file_name: []const u8) !RuntimeMap {
             const path = try std.mem.concat(allocator, u8, &.{"assets/maps/", file_name, ".zon"});
             defer allocator.free(path);
             var map_file = try std.fs.cwd().openFile(path, .{});
@@ -383,8 +400,11 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
                 .{}
             );
 
-            // Map stored map data to RuntimeMap struct
-            const runtime_map = RuntimeMap{
+            return try storedMapToRuntimeMap(allocator, stored_map);
+        }
+
+        fn storedMapToRuntimeMap(allocator: std.mem.Allocator, stored_map: StoredMap) !RuntimeMap {
+            return RuntimeMap{
                 .tile_map = .{
                     .layers = blk: {
                         var tile_layers = try allocator.alloc(
@@ -450,7 +470,6 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
                 },
                 .markers = stored_map.markers,
             };
-            return runtime_map;
         }
     };
 }

@@ -16,7 +16,7 @@ comptime {
         @compileError("The debug module is not allowed in release builds.");
 }
 
-pub fn draw() void {
+pub fn drawDebugPanel() void {
     if (rl.isKeyPressed(.f3)) show_debug_menu = !show_debug_menu;
     if (!show_debug_menu) return;
 

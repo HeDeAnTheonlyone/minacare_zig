@@ -17,6 +17,24 @@ pub fn Callback(comptime param_type: type) type {
     };
 }
 
+pub fn createUpdateCallbackAdapter(T: type) fn(*anyopaque, f32) anyerror!void {
+    return struct{
+        fn adapter(obj_: *anyopaque, delta: f32) !void {
+            const obj: *T = @alignCast(@ptrCast(obj_));
+            try obj.update(delta);
+        }
+    }.adapter;
+}
+
+pub fn createDrawCallbackAdapter(T: type) fn(*anyopaque, void) anyerror!void {
+    return struct{
+        fn adapter(obj_: *anyopaque, _: void) !void {
+            const obj: *T = @alignCast(@ptrCast(obj_));
+            obj.draw();
+        }
+    }.adapter;
+}
+
 pub fn Dispatcher(comptime param_type: type) type {
     return struct {
         callback_list: [max_callbacks]Callback(param_type),

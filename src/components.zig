@@ -11,7 +11,7 @@ const Vector2 = rl.Vector2;
 const DummyError = error{};
 
 pub const AnimationPlayer = struct {
-    texture: rl.Texture,
+    texture: *rl.Texture,
     frame_rect: Rectangle = undefined,
     v_tiles: u8,
     h_tiles: u8,
@@ -39,7 +39,7 @@ pub const AnimationPlayer = struct {
         }
     };
 
-    pub fn init(texture: rl.Texture2D, v_tiles: u8, h_tiles: u8, frame_time: f32) Self {
+    pub fn init(texture: *rl.Texture2D, v_tiles: u8, h_tiles: u8, frame_time: f32) Self {
         return .{
             .texture = texture,
             .v_tiles = v_tiles,
@@ -50,7 +50,7 @@ pub const AnimationPlayer = struct {
 
     pub fn draw(self: Self, pos: rl.Vector2) void {
         drawer.drawTexturePro(
-            self.texture,
+            self.texture.*,
             self.frame_rect,
             Rectangle.init(
                 pos.x,
@@ -175,7 +175,7 @@ pub const Movement = struct {
     pos: Vector2,
     speed: f32,
     events: struct {
-        pos_changed: event.Dispatcher(Vector2),
+        on_pos_changed: event.Dispatcher(Vector2),
     },
 
     const Self = @This();
@@ -184,7 +184,7 @@ pub const Movement = struct {
         return .{
             .pos = pos,
             .speed = speed,
-            .events = .{ .pos_changed = .init },
+            .events = .{ .on_pos_changed = .init },
         };
     }
 
@@ -194,7 +194,7 @@ pub const Movement = struct {
     }
 
     pub fn move(self: *Self, target_pos: Vector2, ) !void {
-        try self.events.pos_changed.dispatch(target_pos);
+        try self.events.on_pos_changed.dispatch(target_pos);
         self.pos = target_pos;
     }
 };
@@ -273,7 +273,7 @@ pub const Collider = struct {
     }
 
     /// Retuns as an offset and size from the position.
-    pub fn getCenter(self: *Self) Vector2 {
+    pub fn getCenter(self: Self) Vector2 {
         return .{
             .x = self.hitbox.width / 2 + self.hitbox.x,
             .y = self.hitbox.height / 2 + self.hitbox.y,

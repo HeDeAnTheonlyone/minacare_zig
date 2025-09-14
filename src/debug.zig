@@ -20,7 +20,6 @@ pub fn drawDebugPanel() void {
     if (rl.isKeyPressed(.f3)) show_debug_menu = !show_debug_menu;
     if (!show_debug_menu) return;
 
-    rg.setFont(settings.font);
     rg.setStyle( .default, .{ .default = .text_size }, 24);
     rg.setStyle(
         .default,

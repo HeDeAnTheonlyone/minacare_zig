@@ -41,6 +41,14 @@ pub fn drawRectOutline(rect: Rectangle, line_thickness: f32, color: Color) void 
     );
 }
 
+pub fn drawRectOutlineAsIs(rect: Rectangle, line_thickness: f32, color: Color) void {
+    rl.drawRectangleLinesEx(
+        rect,
+        line_thickness,
+        color
+    );
+}
+
 
 pub fn drawCircle(center: Vector2, radius: f32, color: Color) void {
     const scaled_center = center.scale(settings.resolution_ratio);
@@ -49,5 +57,15 @@ pub fn drawCircle(center: Vector2, radius: f32, color: Color) void {
         @intFromFloat(scaled_center.y),
         radius,
         color
+    );
+}
+
+pub fn drawRectAsIs(rect: Rectangle, color: rl.Color) void {
+    rl.drawRectangle(
+        @intFromFloat(rect.x),
+        @intFromFloat(rect.y),
+        @intFromFloat(rect.width),
+        @intFromFloat(rect.height),
+        color,
     );
 }

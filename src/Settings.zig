@@ -20,6 +20,7 @@ pub const debug = true;
 pub fn init() !void {
     resolution_ratio = getResolutionRatio();
     font = try rl.loadFontEx("assets/fonts/vividly_extended.ttf", 32, null);
+    rg.setFont(font);
 }
 
 pub fn deinit() void {

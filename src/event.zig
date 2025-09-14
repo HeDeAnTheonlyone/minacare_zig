@@ -90,7 +90,10 @@ pub fn Dispatcher(comptime param_type: type) type {
         pub fn remove(self: *Self, callback: Callback(param_type)) void {
             if (self.callback_count == 0) return
             for (0..self.callback_count) |i| {
-                if (std.meta.eql(self.callback_list[i], callback)) {
+                if (
+                    self.callback_list[i].func == callback.func and
+                    self.callback_list[i].ctx == callback.ctx
+                ) {
                     self.callback_list[i] = self.callback_list[self.callback_count - 1];
                     self.callback_count -= 1;
                 }

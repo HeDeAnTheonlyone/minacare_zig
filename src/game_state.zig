@@ -13,6 +13,7 @@ const tile_spritesheet_path = "assets/textures/tile_spritesheet.png";
 
 /// A global counter for all kinds of stuff that needs it.
 pub var counter: f32 = 0;
+pub var paused: bool = false;
 pub var map: TileMap = undefined;
 pub var player: Player = undefined;
 pub var text_box: TextBox = undefined;
@@ -63,6 +64,8 @@ pub fn init() !void {
         &text_box,
         "draw",
     ));
+
+    try text_box.enqueueMessage(.{ .text = "Hello Cerber and Minawan!" });
 }
 
 pub fn deinit() void {

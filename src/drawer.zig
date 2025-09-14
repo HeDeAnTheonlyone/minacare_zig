@@ -1,8 +1,11 @@
+//! Handles projecting and screen size adjusting for draw function calls
+
 const settings = @import("settings.zig");
 const rl = @import("raylib").raylib_module;
 const Rectangle = rl.Rectangle;
 const Vector2 = rl.Vector2;
 const Color = rl.Color;
+
 
 pub fn drawFps(pos: Vector2) void {
     const scaled_pos = pos.scale(settings.resolution_ratio);
@@ -37,6 +40,7 @@ pub fn drawRectOutline(rect: Rectangle, line_thickness: f32, color: Color) void 
         color
     );
 }
+
 
 pub fn drawCircle(center: Vector2, radius: f32, color: Color) void {
     const scaled_center = center.scale(settings.resolution_ratio);

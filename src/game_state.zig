@@ -6,6 +6,7 @@ const event = @import("event.zig");
 const TileMap = @import("TileMap.zig");
 const Player = @import("Player.zig");
 const char_spawner = @import("character_spawner.zig");
+const TextBox = @import("TextBox.zig");
 
 const character_spritehseet_path = "assets/textures/characters_spritesheet.png";
 const tile_spritesheet_path = "assets/textures/tile_spritesheet.png";
@@ -14,6 +15,7 @@ const tile_spritesheet_path = "assets/textures/tile_spritesheet.png";
 pub var counter: f32 = 0;
 pub var map: TileMap = undefined;
 pub var player: Player = undefined;
+pub var text_box: TextBox = undefined;
 pub var character_spritesheet: rl.Texture2D = undefined;
 pub var tile_spritesheet: rl.Texture2D = undefined;
 pub var events: struct {
@@ -32,10 +34,10 @@ pub fn init() !void {
         .on_draw_ui = .init,
     };
     map = TileMap.init(&tile_spritesheet);
-    try events.on_draw_world.add(.{
-        .func = event.createDrawCallbackAdapter(TileMap),
-        .ctx = &map
-    });
+    try events.on_draw_world.add(.init(
+        &map,
+        "draw",
+    ));
     
     player = try Player.init(
         try char_spawner.Cerby.spawn(
@@ -45,27 +47,31 @@ pub fn init() !void {
             }}
         )
     );
-    try events.on_update.add(.{
-        .func = event.createUpdateCallbackAdapter(Player),
-        .ctx = &player
-    });
-    try events.on_draw_world.add(.{
-        .func = event.createDrawCallbackAdapter(Player),
-        .ctx = &player
-    });
+    try events.on_update.add(.init(
+        &player,
+        "update",
+        ));
+    try events.on_draw_world.add(.init(&player, "draw"));
 
-    try player.char.movement.events.on_pos_changed.add(.{
-        .func = TileMap.updateTileRenderCacheCallback,
-        .ctx = &map
-    });
+    try player.char.movement.events.on_pos_changed.add(.init(
+        &map,
+        "updateTileRenderCache",
+    ));
+
+    text_box = .init;
+    try events.on_draw_ui.add(.init(
+        &text_box,
+        "draw",
+    ));
 }
 
-pub fn deinit(allocator: Allocator) void {
-    map.deinit(allocator);
+pub fn deinit() void {
+    map.deinit();
     character_spritesheet.unload();
     tile_spritesheet.unload();
 }
 
+/// The games root update function
 pub fn update() !void {
     const delta = std.math.clamp(
         rl.getFrameTime(),
@@ -77,6 +83,7 @@ pub fn update() !void {
     try events.on_update.dispatch(delta);
 }
 
+/// The games root draw function
 pub fn draw() void {
     rl.beginDrawing();
     defer rl.endDrawing();
@@ -90,9 +97,14 @@ pub fn draw() void {
     if (@import("builtin").mode == .Debug) {
         const debug = @import("debug.zig");
         debug.drawDebugPanel();
-        if (debug.show_fps) @import("drawer.zig").drawFps(.{
-            .x = 200,
-            .y = 10,
-        });
+        // if (debug.show_fps) @import("drawer.zig").drawFps(.{
+        //     .x = 200,
+        //     .y = 10,
+        // });
     }
+
+    @import("drawer.zig").drawFps(.{
+        .x = 200,
+        .y = 10,
+    });
 }

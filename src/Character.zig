@@ -27,11 +27,6 @@ pub const VTable = struct {
     getInputVector: *const fn() Vector2,
 };
 
-pub fn updateCallback(self_: *anyopaque, delta: f32) !void {
-    const self: *Self = @alignCast(@ptrCast(self_));
-    try self.update(delta);
-}
-
 pub fn update(self: *Self, delta: f32) !void {
     try self.moveAndCollide(delta);
     try self.updateVisuals();
@@ -42,7 +37,7 @@ fn updateVisuals(self: *Self) !void {
     try self.vtable.updateVisuals(self);
 }
 
-pub fn draw(self: *Self) void {
+pub fn draw(self: *Self) !void {
     self.animation.draw(self.movement.pos);
     
     if (@import("builtin").mode == .Debug) {

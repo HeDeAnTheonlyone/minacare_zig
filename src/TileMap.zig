@@ -8,13 +8,17 @@ const Rectangle = rl.Rectangle;
 
 texture: *rl.Texture2D,
 map_data: RuntimeMap = undefined,
-/// 2 layers * 9 chunks * 32 tiles horizontal * 32 tiles vertical
-tile_render_cache: [2 * 9 * 32 * 32]?TileDrawData = @splat(null),
+tile_render_cache: [render_cache_size]?TileDrawData = @splat(null),
 current_chunk: ChunkCoordinates = Coordinates{.x = 0, .y = 0},
 sub_frame_counter: f32 = 0,
+arena: ?std.heap.ArenaAllocator = null,
 
 const Self = @This();
+/// 2 layers * 9 chunks * 32 tiles horizontal * 32 tiles vertical
+const render_cache_size = 2 * 9 * @as(u32, @intCast(settings.chunk_size)) * @as(u32, @intCast(settings.chunk_size));
 
+/// `backing_allocator` will be put into an arena for single call free of all the managed memory with `deinit()`.
+/// 
 /// Deinitialize with `deinit()`.
 pub fn init(texture: *rl.Texture2D) Self {
     return .{
@@ -22,9 +26,8 @@ pub fn init(texture: *rl.Texture2D) Self {
     };
 }
 
-pub fn deinit(self: *Self, allocator: std.mem.Allocator) void {
-    self.texture.unload();
-    self.map_data.deinit(allocator);
+pub fn deinit(self: *Self) void {
+    if (self.arena != null) self.arena.?.deinit();
 }
 
 pub fn drawCallback(self_: *anyopaque, _: void) void {
@@ -32,7 +35,7 @@ pub fn drawCallback(self_: *anyopaque, _: void) void {
     self.draw();
 } 
 
-pub fn draw(self: *Self) void {
+pub fn draw(self: *Self) !void {
     for (self.tile_render_cache) |opt_draw_data| {
         const draw_data = opt_draw_data orelse continue;
         var tmp_source_rect = draw_data.source_rect;
@@ -84,13 +87,13 @@ fn debugDraw(self: *Self) void {
 
 /// Deinits old map and load new map. `map_name` refers to the file name without the extension.
 pub fn loadMap(self: *Self, allocator: std.mem.Allocator, map_name: []const u8) !void {
-    self.map_data.deinit(allocator);
-    self.map_data = try RuntimeMap.loadFromFile(allocator, map_name);
-}
-
-pub fn updateTileRenderCacheCallback(self_: *anyopaque, player_pos: Vector2) !void {
-    const self: *Self = @alignCast(@ptrCast(self_));
-    try self.updateTileRenderCache(player_pos);
+    if (self.arena != null) self.arena.?.deinit();
+    self.arena = std.heap.ArenaAllocator.init(allocator);
+    self.map_data = try RuntimeMap.loadFromFile(
+    self.arena.?.allocator(),
+    allocator,
+        map_name
+    );
 }
 
 pub fn updateTileRenderCache(self: *Self, player_pos: Vector2) !void {
@@ -292,7 +295,7 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
             layers: []TileLayer,
             tile_properties: switch (value_container) {
                 .Array => []TileProperties,
-                .HashMap =>std.AutoHashMapUnmanaged(i32, TileProperties),
+                .HashMap => std.AutoHashMapUnmanaged(i32, TileProperties),
             },
 
             pub const TileProperties = struct {
@@ -306,11 +309,11 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
                     .Array => []TileChunk,
                     .HashMap => std.AutoHashMapUnmanaged(Coordinates, TileChunk),
                 },
-                x: i32,
-                y: i32,
-                width: u32, // In tiles
-                height: u32, // In tiles
-                name: []const u8,
+                // x: i32,
+                // y: i32,
+                // width: u32, // In tiles
+                // height: u32, // In tiles
+                // name: []const u8,
 
                 pub const TileChunk = struct {
                     tile_ids: []const i32,
@@ -330,7 +333,7 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
                         return .{
                             .x = coords.x * settings.chunk_size,
                             .y = coords.y * settings.chunk_size,
-                            .tile_ids = &[_]i32{63} ** 1024,
+                            .tile_ids = &[_]i32{63} ** (@as(u32, @intCast(settings.chunk_size)) * @as(u32, @intCast(settings.chunk_size))),
                         };
                     }   
                 };
@@ -361,53 +364,60 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
             };
         };
 
-        pub fn deinit(self: *RuntimeMap, allocator: std.mem.Allocator) void {
-            self.collision_map.collision_shapes.deinit(allocator);
-            self.tile_map.tile_properties.deinit(allocator);
-            for (self.tile_map.layers) |*layer| {
-                layer.chunks.deinit(allocator);
-            }
-            allocator.free(self.tile_map.layers);
-        }
-
         /// Load only the internal map data and not the texture.
         /// File name refers to only the file name without the extension and not the whole path.
         /// Deinitialize with `deinit()`.
-        fn loadFromFile(allocator: std.mem.Allocator, file_name: []const u8) !RuntimeMap {
-            const path = try std.mem.concat(allocator, u8, &.{"assets/maps/", file_name, ".zon"});
-            defer allocator.free(path);
+        fn loadFromFile(
+            arena_allocator: std.mem.Allocator,
+            scratch_allocator: std.mem.Allocator,
+            file_name: []const u8
+        ) !RuntimeMap {
+            const path = try std.mem.concat(
+                scratch_allocator,
+                u8,
+                &.{"assets/maps/", file_name, ".zon"}
+            );
+            defer scratch_allocator.free(path);
             var map_file = try std.fs.cwd().openFile(path, .{});
             defer map_file.close();
-            return load(allocator, &map_file);
+            return load(
+                arena_allocator,
+                scratch_allocator,
+                &map_file
+            );
         }
 
         /// Deinitialize with `deinit()`.
-        fn load(allocator: std.mem.Allocator, file: *std.fs.File) !RuntimeMap {
-            var file_content = std.Io.Writer.Allocating.init(allocator);
+        fn load(
+            arena_allocator: std.mem.Allocator,
+            scratch_allocator: std.mem.Allocator,
+            file: *std.fs.File
+        ) !RuntimeMap {
+            var file_content = std.Io.Writer.Allocating.init(scratch_allocator);
             defer file_content.deinit();
             var file_reader = file.reader(&.{});
             const content_len = try std.Io.Reader.streamRemaining(&file_reader.interface, &file_content.writer);
 
-            const sentinel_zon_str: [:0]u8 = try allocator.allocSentinel(u8, content_len, 0);
-            defer allocator.free(sentinel_zon_str);
+            const sentinel_zon_str: [:0]u8 = try scratch_allocator.allocSentinel(u8, content_len, 0);
+            defer scratch_allocator.free(sentinel_zon_str);
             @memcpy(sentinel_zon_str, file_content.written());
 
             const stored_map = try std.zon.parse.fromSlice(
                 StoredMap,
-                allocator,
+                scratch_allocator,
                 sentinel_zon_str,
                 null,
                 .{}
             );
 
-            return try storedMapToRuntimeMap(allocator, stored_map);
+            return try storedMapToRuntimeMap(arena_allocator, stored_map);
         }
 
-        fn storedMapToRuntimeMap(allocator: std.mem.Allocator, stored_map: StoredMap) !RuntimeMap {
+        fn storedMapToRuntimeMap(arena_allocator: std.mem.Allocator, stored_map: StoredMap) !RuntimeMap {
             return RuntimeMap{
                 .tile_map = .{
                     .layers = blk: {
-                        var tile_layers = try allocator.alloc(
+                        var tile_layers = try arena_allocator.alloc(
                             RuntimeMap.TileMap.TileLayer,
                             stored_map.tile_map.layers.len
                         );
@@ -416,14 +426,14 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
                                 Coordinates,
                                 RuntimeMap.TileMap.TileLayer.TileChunk
                             ).empty;
-                            try chunk_map.ensureTotalCapacity(allocator, 128);
-                            // TODO maybe increase as time goes on. -------------------------/\
+                            try chunk_map.ensureTotalCapacity(arena_allocator, 128);
+                            // TODO maybe increase as time goes on. --------------------------------/\
                             for (stored_map.tile_map.layers[i].chunks) |chunk| {
                                 try chunk_map.put(
-                                    allocator,
+                                    arena_allocator,
                                     chunk.getChunkCoord(),
                                     .{
-                                        .tile_ids = chunk.tile_ids,
+                                        .tile_ids = try arena_allocator.dupe(i32, chunk.tile_ids),
                                         .x = chunk.x,
                                         .y = chunk.y,
                                     },
@@ -438,11 +448,11 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
                             i32,
                             TileMap.TileProperties
                         ).empty;
-                        try tile_property_list.ensureTotalCapacity(allocator, 128);
-                        // TODO maybe increase as time goes on. ---------------/\
+                        try tile_property_list.ensureTotalCapacity(arena_allocator, 128);
+                        // TODO maybe increase as time goes on. -----------------------------------------/\
                         for (stored_map.tile_map.tile_properties) |prop| {
                             try tile_property_list.put(
-                                allocator,
+                                arena_allocator,
                                 prop.id,
                                 prop,
                             );
@@ -456,9 +466,10 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
                             Coordinates,
                             Rectangle
                         ).empty;
+                        try collisions.ensureTotalCapacity(arena_allocator, 128);
                         for (stored_map.collision_map.collision_shapes) |rect| {
                             try collisions.put(
-                                allocator,
+                                arena_allocator,
                                 Coordinates.fromPosition(.{
                                     .x = rect.x,
                                     .y = rect.y,
@@ -468,7 +479,21 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
                         break :blk collisions;
                     },
                 },
-                .markers = stored_map.markers,
+                .markers = blk: {
+                    const marker_list = try arena_allocator.alloc(
+                        Marker,
+                        stored_map.markers.len
+                    );
+                    for (stored_map.markers, 0..) |m, i| {
+                        marker_list[i] = .{
+                            .x = m.x,
+                            .y = m.y,
+                            .kind = m.kind,
+                            .name = try arena_allocator.dupe(u8, m.name),
+                        };
+                    }
+                    break :blk marker_list;
+                }
             };
         }
     };

@@ -1,7 +1,7 @@
 const std = @import("std");
 const rl = @import("raylib").raylib_module;
 const settings = @import("../src/Settings.zig");
-const Map = @import("../src/TileMap.zig").StoredMap;
+const StoredMap = @import("../src/TileMap.zig").StoredMap;
 
 /// Intermediate types for the data cleanup and conversion
 const tiled_types = struct {
@@ -195,19 +195,19 @@ fn extractRelevantMapData(T: type, allocator: std.mem.Allocator, json_value: std
     ptr.* = parsed.value;
 }
 
-fn convertMap(allocator: std.mem.Allocator, map_data: tiled_types.MapData) !Map {
-    return Map{
+fn convertMap(allocator: std.mem.Allocator, map_data: tiled_types.MapData) !StoredMap {
+    return .{
         .tile_map = .{
             .layers = outer_blk: {
-                var layers = try allocator.alloc(Map.TileMap.TileLayer, map_data.tile_layers.len);
+                var layers = try allocator.alloc(StoredMap.TileMap.TileLayer, map_data.tile_layers.len);
                 for (0..layers.len) |i| {
                     layers[i] = middle_blk: {
                         const tile_layer = map_data.tile_layers[i];
-                        const layer = Map.TileMap.TileLayer{
+                        const layer = StoredMap.TileMap.TileLayer{
                             .chunks = inner_blk: {
-                                var chunks = try allocator.alloc(Map.TileMap.TileLayer.TileChunk, tile_layer.chunks.len);
+                                var chunks = try allocator.alloc(StoredMap.TileMap.TileLayer.TileChunk, tile_layer.chunks.len);
                                 for (0..tile_layer.chunks.len) |j| {
-                                    chunks[j] = Map.TileMap.TileLayer.TileChunk{
+                                    chunks[j] = StoredMap.TileMap.TileLayer.TileChunk{
                                         .tile_ids = blk: {
                                             const list: []i32 = @constCast(@as([]const i32, @alignCast(@ptrCast(tile_layer.chunks[j].data))));
                                             for (list) |*id| {
@@ -221,11 +221,11 @@ fn convertMap(allocator: std.mem.Allocator, map_data: tiled_types.MapData) !Map 
                                 }
                                 break :inner_blk chunks;
                             },
-                            .x = tile_layer.startx,
-                            .y = tile_layer.starty,
-                            .width = tile_layer.width,
-                            .height = tile_layer.height,
-                            .name = tile_layer.name, 
+                            // .x = tile_layer.startx,
+                            // .y = tile_layer.starty,
+                            // .width = tile_layer.width,
+                            // .height = tile_layer.height,
+                            // .name = tile_layer.name, 
                         };
                         break :middle_blk layer;
                     };
@@ -234,15 +234,15 @@ fn convertMap(allocator: std.mem.Allocator, map_data: tiled_types.MapData) !Map 
             },
             .tile_properties = outer_blk: {
                 const tiles = map_data.special_tile_list.tiles;
-                var properties = try allocator.alloc(Map.TileMap.TileProperties, tiles.len);
+                var properties = try allocator.alloc(StoredMap.TileMap.TileProperties, tiles.len);
 
                 for(0..tiles.len) |i| {
                     properties[i] = inner_blk: {
-                        var property = Map.TileMap.TileProperties{
+                        var property = StoredMap.TileMap.TileProperties{
                             .id = @intCast(tiles[i].id),
                         };
                         for (tiles[i].properties) |p| {
-                            inline for (comptime std.meta.fieldNames(Map.TileMap.TileProperties)) |field| {
+                            inline for (comptime std.meta.fieldNames(StoredMap.TileMap.TileProperties)) |field| {
                                 if (std.mem.eql(u8, field, p.name))
                                 @field(property, field) = p.value;
                             }
@@ -272,13 +272,13 @@ fn convertMap(allocator: std.mem.Allocator, map_data: tiled_types.MapData) !Map 
             }
         },
         .markers = blk: {
-            var markers = try allocator.alloc(Map.Marker, map_data.marker_layer.objects.len);
+            var markers = try allocator.alloc(StoredMap.Marker, map_data.marker_layer.objects.len);
             for (0..markers.len) |i| {
                 const point_obj = map_data.marker_layer.objects;
-                markers[i] = Map.Marker{
+                markers[i] = StoredMap.Marker{
                     .x = point_obj[i].x,
                     .y = point_obj[i].y,
-                    .kind = std.meta.stringToEnum(Map.Marker.Kind, point_obj[i].@"type").?,
+                    .kind = std.meta.stringToEnum(StoredMap.Marker.Kind, point_obj[i].@"type").?,
                     .name = point_obj[i].name,
                 };
             }

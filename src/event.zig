@@ -1,18 +1,49 @@
 const std = @import("std");
 
-pub fn CallbackFn(comptime param_type: type) type {
-    return *const fn(ctx: *anyopaque, param: param_type) anyerror!void;
-}
-    
 pub fn Callback(comptime param_type: type) type {
     return struct {
-        func: CallbackFn(param_type),
+        func: *const fn(ctx: *anyopaque, args: param_type) anyerror!void,
         ctx: *anyopaque,
 
         const Self = @This();
 
-        pub fn invoke(self: *const Self, param: param_type) !void {
-            try self.func(self.ctx, param);
+        pub fn init(comptime ctx: anytype, comptime fn_name: []const u8) Self {
+            const T = switch (@typeInfo(@TypeOf(ctx))) {
+                .pointer => |p| p.child,
+                else => @compileError("Callback context has needs to be a pointer"),
+            };
+
+            return .{
+                .func = createAdapterFn(T, fn_name),
+                .ctx = ctx,
+            };
+        }
+
+        pub fn invoke(self: *const Self, args: param_type) !void {
+            try self.func(self.ctx, args);
+        }
+
+        fn createAdapterFn(
+            comptime T: type,
+            comptime fn_name: []const u8
+        ) fn(*anyopaque, param_type) anyerror!void {
+            return struct{
+                fn adapter(obj_: *anyopaque, args: param_type) !void {
+                    const obj: *T = @alignCast(@ptrCast(obj_));
+                    const f = @field(T, fn_name);
+                    const args_list = switch (@typeInfo(param_type)) {
+                        .void => .{obj},
+                        .array => .{obj} ++ args,
+                        else => .{obj} ++ .{args},
+                    };
+
+                    try @call(
+                        .auto,
+                        f,
+                        args_list,
+                    );
+                }
+            }.adapter;
         }
     };
 }
@@ -44,9 +75,9 @@ pub fn Dispatcher(comptime param_type: type) type {
         const max_callbacks = 128;
         pub const init = Self{.callback_list = undefined, .callback_count = 0};
 
-        pub fn dispatch(self: *Self, param: param_type) anyerror!void {
+        pub fn dispatch(self: *Self, args: param_type) anyerror!void {
             for (0..self.callback_count) |i| {
-                try self.callback_list[i].invoke(param);
+                try self.callback_list[i].invoke(args);
             }
         }
 
@@ -64,6 +95,6 @@ pub fn Dispatcher(comptime param_type: type) type {
                     self.callback_count -= 1;
                 }
             };
-        } 
+        }
     };
 }

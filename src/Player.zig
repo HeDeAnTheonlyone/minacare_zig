@@ -27,19 +27,14 @@ pub fn init(char: Character) !Self {
     };
 }
 
-pub fn updateCallback(self_: *anyopaque, delta: f32) !void {
-    const self: Self = @alignCast(@ptrCast(self_));
-    self.update(delta);
-}
-
 pub fn update(self: *Self, delta: f32) !void {
     if (rl.isKeyReleased(.t)) try self.transform();
     try self.char.update(delta);
     updateCamPos(&self.cam, self.char.getCenter());
 }
 
-pub fn draw(self: *Self) void {
-    self.char.draw();
+pub fn draw(self: *Self) !void {
+    try self.char.draw();
 }
 
 /// Transforms between Cerber and Cerby

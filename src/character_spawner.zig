@@ -10,11 +10,11 @@ const Location = TileMap.Location;
 
 pub const Cerber = struct {
     pub const vtable: Character.VTable = .{
-        .updateVisuals = updateVisuals,
+        .updateRotation = updateRotation,
         .getInputVector = components.input.getInputVector,
     };
 
-    fn updateVisuals(self: *Character) !void {
+    fn updateRotation(self: *Character) !void {
         const input_vec = self.vtable.getInputVector();
 
         if (@abs(input_vec.x) < @abs(input_vec.y)) {
@@ -42,7 +42,7 @@ pub const Cerber = struct {
         
         const collider = components.Collider{
             .hitbox = Rectangle.init(
-                4,
+                5,
                 0,
                 22,
                 32,
@@ -76,11 +76,11 @@ pub const Cerber = struct {
 
 pub const Cerby = struct {
     pub const vtable: Character.VTable = .{
-        .updateVisuals = updateVisuals,
+        .updateRotation = updateRotation,
         .getInputVector = components.input.getInputVector,
     };
 
-    fn updateVisuals(self: *Character) !void {
+    fn updateRotation(self: *Character) !void {
         const input_vec = self.vtable.getInputVector();
         if (input_vec.x < 0) self.animation.h_flip = false
         else if (input_vec .x > 0) self.animation.h_flip = true;

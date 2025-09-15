@@ -2,35 +2,41 @@ const std = @import("std");
 
 pub fn Callback(comptime param_type: type) type {
     return struct {
-        func: *const fn(ctx: *anyopaque, args: param_type) anyerror!void,
-        ctx: *anyopaque,
+        func: *const fn(ctx: ?*anyopaque, args: param_type) anyerror!void,
+        ctx: ?*anyopaque,
 
         const Self = @This();
 
         pub fn init(comptime ctx: anytype, comptime fn_name: []const u8) Self {
-            const T = switch (@typeInfo(@TypeOf(ctx))) {
-                .pointer => |p| p.child,
-                else => @compileError("Callback context has needs to be a pointer"),
-            };
-
-            return .{
-                .func = createAdapterFn(T, fn_name),
-                .ctx = ctx,
+            return switch (@typeInfo(@TypeOf(ctx))) {
+                .pointer => |p| blk: {
+                    const T = p.child;
+                    if (T == type) @compileError("Types have to be passed directly.");
+                    break :blk .{
+                        .func = createPointerAdapterFn(T, fn_name),
+                        .ctx = ctx,
+                    };
+                },
+                .type => .{
+                        .func = createTypeAdapterFn(ctx, fn_name),
+                        .ctx = null,
+                    },
+                else => @compileError("Callback context has to be a pointer or type."),
             };
         }
 
-        pub fn invoke(self: *const Self, args: param_type) !void {
+        pub fn invoke(self: *Self, args: param_type) !void {
             try self.func(self.ctx, args);
         }
 
-        fn createAdapterFn(
+        fn createPointerAdapterFn(
             comptime T: type,
             comptime fn_name: []const u8
-        ) fn(*anyopaque, param_type) anyerror!void {
+        ) fn(?*anyopaque, param_type) anyerror!void {
             return struct{
-                fn adapter(obj_: *anyopaque, args: param_type) !void {
-                    const obj: *T = @alignCast(@ptrCast(obj_));
+                fn adapter(ctx: ?*anyopaque, args: param_type) !void {
                     const f = @field(T, fn_name);
+                    const obj: *T = @alignCast(@ptrCast(ctx.?));
                     const args_list = switch (@typeInfo(param_type)) {
                         .void => .{obj},
                         .array => .{obj} ++ args,
@@ -45,34 +51,40 @@ pub fn Callback(comptime param_type: type) type {
                 }
             }.adapter;
         }
+
+        fn createTypeAdapterFn(
+            comptime T: type,
+            comptime fn_name: []const u8
+        ) fn(?*anyopaque, param_type) anyerror!void {
+            return struct{
+                fn adapter(_: ?*anyopaque, args: param_type) !void {
+                    const f = @field(T, fn_name);
+                    const args_list = switch (@typeInfo(param_type)) {
+                        .void => {
+                            try f();
+                            return;
+                        },
+                        .array => args,
+                        else => .{args},
+                    };
+
+                    try @call(
+                        .auto,
+                        f,
+                        args_list,
+                    );
+                }
+            }.adapter;
+        }
     };
 }
 
-pub fn createUpdateCallbackAdapter(T: type) fn(*anyopaque, f32) anyerror!void {
-    return struct{
-        fn adapter(obj_: *anyopaque, delta: f32) !void {
-            const obj: *T = @alignCast(@ptrCast(obj_));
-            try obj.update(delta);
-        }
-    }.adapter;
-}
-
-pub fn createDrawCallbackAdapter(T: type) fn(*anyopaque, void) anyerror!void {
-    return struct{
-        fn adapter(obj_: *anyopaque, _: void) !void {
-            const obj: *T = @alignCast(@ptrCast(obj_));
-            obj.draw();
-        }
-    }.adapter;
-}
-
-pub fn Dispatcher(comptime param_type: type) type {
+pub fn Dispatcher(comptime param_type: type, comptime max_callbacks: usize) type {
     return struct {
         callback_list: [max_callbacks]Callback(param_type),
         callback_count: u8,
 
         const Self = @This();
-        const max_callbacks = 128;
         pub const init = Self{.callback_list = undefined, .callback_count = 0};
 
         pub fn dispatch(self: *Self, args: param_type) anyerror!void {

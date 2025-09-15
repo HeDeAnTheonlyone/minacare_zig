@@ -1,23 +1,29 @@
 const std = @import("std");
 const rl = @import("raylib");
 const rg = @import("raygui");
+const game_state = @import("game_state.zig");
+const debug = @import("debug.zig");
 const settings = @import("settings.zig");
 const event = @import("event.zig");
 const drawer = @import("drawer.zig");
 
 msg_queue: [max_msg]Message,
-msg_count: u32,
-msg_pointer: u32,
+displayed_chars: u32 = 0,
+delay_counter: f32 = 0,
+display_delay: f32,
+msg_count: u8 = 0,
+msg_pointer: u8 = 0,
+current_msg_text: [1024]u8,
 events: struct {
-    on_popup: event.Dispatcher(void),
-    on_close: event.Dispatcher(void),
+    on_popup: event.Dispatcher(void,8),
+    on_close: event.Dispatcher(void, 8),
 },
 
 const Self = @This();
 pub const init = Self{
     .msg_queue = undefined,
-    .msg_count = 0,
-    .msg_pointer = 0,
+    .display_delay = 0.01,
+    .current_msg_text = undefined,
     .events = .{
         .on_popup = .init,
         .on_close = .init,
@@ -26,14 +32,24 @@ pub const init = Self{
 const max_msg = 255;
 
 pub const Message = struct {
-    text: [:0]const u8,
+    text: []const u8,
     // answers: [][]const u8,
 };
 
-pub fn update(self: *Self, _: f32) void {
+pub fn update(self: *Self, delta: f32) !void {
     if (self.msg_count == 0) return;
+    
+    // TODO Make this configurable.
     if (rl.isKeyReleased(.space)) {
-        self.nextMessage();
+        try self.nextMessage();
+    }
+
+    if (self.displayed_chars < self.msg_queue[self.msg_pointer].text.len) {
+        self.delay_counter += delta;
+        if (self.delay_counter >= self.display_delay) {
+            self.delay_counter = 0;
+            self.displayed_chars += 1;
+        }
     }
 }
 
@@ -46,12 +62,15 @@ pub fn draw(self: *Self) !void {
         @floatFromInt(settings.window_width - 100),
         @floatFromInt(@divFloor(settings.window_height, 4)),
     );
-    drawer.drawRectAsIs(rect, .white);
+    rl.drawRectangleRounded(rect, 0.2, 5, .white);
 
-    drawer.drawRectOutlineAsIs(rect.scaleCentered(0.9), 5, .red);
 
-    rg.setStyle(.default, .{ .default = .text_size }, 24);
-    _ = rg.label(rect.scaleCentered(0.9), self.getCurrentMessage()); 
+    rg.setStyle(.default, .{ .default = .text_size }, 32);
+    rg.setStyle(.label, .{ .control = .text_color_normal }, rl.colorToInt(.black));
+    rg.setStyle(.label, .{ .control = .text_padding }, 40);
+    rg.setStyle(.default, .{ .default = .text_alignment_vertical }, 0);
+    rg.setStyle(.default, .{ .default = .text_line_spacing }, 40);
+    _ = rg.label(rect, self.getCurrentMessage()); 
 }
 
 pub fn enqueuMessageList(self: *Self, msgs: []const Message) !void {
@@ -69,24 +88,24 @@ pub fn enqueueMessage(self: *Self, msg: Message) !void {
 }
 
 fn getCurrentMessage(self: *Self) [:0]const u8 {
-    return self.msg_queue[self.msg_pointer].text;
+    const msg = self.msg_queue[self.msg_pointer];
+    std.mem.copyForwards(u8, &self.current_msg_text, msg.text);
+    self.current_msg_text[self.displayed_chars] = 0;
+    return self.current_msg_text[0..self.displayed_chars:0];
 }
 
 /// Moves to the next message and calls the close function when no messages are left.
 fn nextMessage(self: *Self) !void {
-    if (self.msg_pointer == self.msg_count) {
-        try self.close();
-        return "";
-    }
-    // const msg = self.msg_queue[self.msg_pointer];
     self.msg_pointer += 1;
-    // return msg;
+
+    self.displayed_chars = 0;
+    self.delay_counter = 0;
+
+    if (self.msg_pointer == self.msg_count) try self.close();
 }
 
 /// Makes the textbox appear
 fn popup(self: *Self) !void {
-    //TODO
-
     try self.events.on_popup.dispatch({});
 }
 

@@ -8,6 +8,7 @@ pub var window_width: i32 = 1920;
 pub var window_height:i32 = 1080;
 /// Only use this value in display/drawing context.
 pub var resolution_ratio: f32 = undefined;
+pub const base_framerate = 60;
 pub var target_fps: i32 = 100000;
 pub const tile_size: u8 = 16; // counts for x and y
 pub const chunk_size: u8 = 32; // counts for x and y
@@ -21,6 +22,7 @@ pub fn init() !void {
     resolution_ratio = getResolutionRatio();
     font = try rl.loadFontEx("assets/fonts/vividly_extended.ttf", 32, null);
     rg.setFont(font);
+    rg.setStyle(.default, .{ .default = .text_wrap_mode }, 1);
 }
 
 pub fn deinit() void {

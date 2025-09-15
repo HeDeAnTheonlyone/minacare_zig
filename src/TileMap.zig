@@ -45,9 +45,11 @@ pub fn draw(self: *Self) !void {
             draw_data.properties.?.frame_time != null
         ) {
             const prop = draw_data.properties.?;
-            
+            // TODO
+            // consider making a new lookup table for only the properties of active tiles
+            // to compute the animation frames only once per tile type
             const sub_frame = @as(u32, @intFromFloat(@divFloor(
-                game_state.counter * 60, // 60 is the base reference framerate
+                game_state.counter * settings.base_framerate,
                 @as(f32, @floatFromInt(prop.frame_time.?))
             )));
             const frame = @rem(sub_frame, prop.frames.?);
@@ -94,6 +96,7 @@ pub fn loadMap(self: *Self, allocator: std.mem.Allocator, map_name: []const u8) 
     allocator,
         map_name
     );
+    try self.updateTileRenderCache(game_state.player.char.movement.pos);
 }
 
 pub fn updateTileRenderCache(self: *Self, player_pos: Vector2) !void {
@@ -180,13 +183,20 @@ pub const Location = union(enum) {
     pub fn asPos(loc: Location) Vector2 {
         return switch (loc) {
             .coordinates => |l| blk: {
-                const coord = l.multiplyScalar(settings.tile_size);
+                const pos = l.multiplyScalar(settings.tile_size);
                 break :blk Vector2{
-                    .x = @floatFromInt(coord.x),
-                    .y = @floatFromInt(coord.y),
+                    .x = @floatFromInt(pos.x),
+                    .y = @floatFromInt(pos.y),
                 };
             },
             .position => |l| l,
+        };
+    }
+
+    pub fn asCoords(loc: Location) Coordinates {
+        return switch (loc) {
+            .coordinates => |l| l,
+            .position => |l| Coordinates.fromPosition(l) ,
         };
     }
 };
@@ -300,8 +310,8 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
 
             pub const TileProperties = struct {
                 id: i32,
-                frames: ?u32 = null,
-                frame_time: ?u32 = null,
+                frames: ?u8 = null,
+                frame_time: ?u8 = null,
             };
 
             pub const TileLayer = struct {

@@ -92,6 +92,7 @@ pub const AnimationPlayer = struct {
     }
 
     fn updateFrame(self: *Self) void {
+        // TODO make this precompute and then store it somewhere global
         const columns = @divFloor(self.texture.width, settings.tile_size);
         const frame = self.current_animation.start_frame + self.current_frame;
 
@@ -162,7 +163,7 @@ pub const AnimationPlayer = struct {
         );
     }
 
-    /// Retuns as an offset and size from the position
+    /// Retuns as an offset from the position
     pub fn getCenter(self: *Self) Vector2 {
         return .{
             .x = @floatFromInt(@divFloor(self.getFrameWidth(), 2)),
@@ -175,7 +176,7 @@ pub const Movement = struct {
     pos: Vector2,
     speed: f32,
     events: struct {
-        on_pos_changed: event.Dispatcher(Vector2),
+        on_pos_changed: event.Dispatcher(Vector2, 8),
     },
 
     const Self = @This();
@@ -268,11 +269,10 @@ pub const Collider = struct {
                 is_colliding = is_colliding or positioned_hitbox.checkCollision(collision_shape);
             }
         }
-        
         return is_colliding;
     }
 
-    /// Retuns as an offset and size from the position.
+    /// Retuns as an offset from the position.
     pub fn getCenter(self: Self) Vector2 {
         return .{
             .x = self.hitbox.width / 2 + self.hitbox.x,

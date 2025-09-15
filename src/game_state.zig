@@ -8,6 +8,7 @@ const Player = @import("Player.zig");
 const char_spawner = @import("character_spawner.zig");
 const TextBox = @import("TextBox.zig");
 
+const Self = @This();
 const character_spritehseet_path = "assets/textures/characters_spritesheet.png";
 const tile_spritesheet_path = "assets/textures/tile_spritesheet.png";
 
@@ -20,9 +21,9 @@ pub var text_box: TextBox = undefined;
 pub var character_spritesheet: rl.Texture2D = undefined;
 pub var tile_spritesheet: rl.Texture2D = undefined;
 pub var events: struct {
-    on_update: event.Dispatcher(f32),
-    on_draw_world: event.Dispatcher(void),
-    on_draw_ui: event.Dispatcher(void),
+    on_update: event.Dispatcher(f32, 128),
+    on_draw_world: event.Dispatcher(void, 128),
+    on_draw_ui: event.Dispatcher(void, 128),
 } = undefined;
 
 
@@ -35,10 +36,7 @@ pub fn init() !void {
         .on_draw_ui = .init,
     };
     map = TileMap.init(&tile_spritesheet);
-    try events.on_draw_world.add(.init(
-        &map,
-        "draw",
-    ));
+    try events.on_draw_world.add(.init(&map, "draw"));
     
     player = try Player.init(
         try char_spawner.Cerby.spawn(
@@ -48,24 +46,30 @@ pub fn init() !void {
             }}
         )
     );
-    try events.on_update.add(.init(
-        &player,
-        "update",
-        ));
+    try events.on_update.add(.init(&player, "update"));
     try events.on_draw_world.add(.init(&player, "draw"));
 
-    try player.char.movement.events.on_pos_changed.add(.init(
-        &map,
-        "updateTileRenderCache",
-    ));
+    try player.char.movement.events.on_pos_changed.add(.init(&map, "updateTileRenderCache"));
 
     text_box = .init;
-    try events.on_draw_ui.add(.init(
-        &text_box,
-        "draw",
-    ));
+    try events.on_draw_ui.add(.init(&text_box, "draw"));
+    try events.on_update.add(.init(&text_box, "update"));
+    try text_box.events.on_popup.add(.init(Self, "pause"));
+    try text_box.events.on_close.add(.init(Self, "unpause"));
 
-    try text_box.enqueueMessage(.{ .text = "Hello Cerber and Minawan!" });
+    // Do a single update to avoid visual glitches if the game gets instant paused.
+    try update();
+
+    //DEBUG Testing
+    try text_box.enqueuMessageList(&.{
+        .{ .text = "Hello Minawan" },
+        .{ .text = "And others," },
+        .{ .text = "Progress is comming along nicely" },
+        .{ .text = "just look at this cool textbox" },
+        .{ .text = "Still nothing fancy" },
+        .{ .text = "But it hope this will change soon." },
+        .{ .text = "Testing line wrapping: jdsa dsaoid saodsapopüsaofgís9fdugj3wqk wq dwa ßds0ßdf0ßwa0ßfsad fsaß  sßdaodsakßüfgsdag asf f ß0pjsamfsamfsda fsa0fsaß fsa9fsaikfsak fsßf0isak fsajfnsaop igsmpgdfmgs fds gfdsnmgdfs pgfdsp gdnsoljkö lsddflasdsmgöds a öfsda sda dsa fspdjamg sgdpgpdskogpsd j öldsgö" },
+    });
 }
 
 pub fn deinit() void {
@@ -90,6 +94,7 @@ pub fn update() !void {
 pub fn draw() void {
     rl.beginDrawing();
     defer rl.endDrawing();
+    rl.clearBackground(.black);
 
     rl.beginMode2D(player.cam);
     events.on_draw_world.dispatch({}) catch unreachable;
@@ -106,8 +111,17 @@ pub fn draw() void {
         // });
     }
 
+    // DEBUG
     @import("drawer.zig").drawFps(.{
         .x = 200,
         .y = 10,
     });
+}
+
+pub fn pause() !void {
+    paused = true;
+}
+
+pub fn unpause() !void {
+    paused = false;
 }

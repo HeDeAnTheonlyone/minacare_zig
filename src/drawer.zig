@@ -60,12 +60,3 @@ pub fn drawCircle(center: Vector2, radius: f32, color: Color) void {
     );
 }
 
-pub fn drawRectAsIs(rect: Rectangle, color: rl.Color) void {
-    rl.drawRectangle(
-        @intFromFloat(rect.x),
-        @intFromFloat(rect.y),
-        @intFromFloat(rect.width),
-        @intFromFloat(rect.height),
-        color,
-    );
-}

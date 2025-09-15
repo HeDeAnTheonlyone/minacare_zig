@@ -9,8 +9,8 @@
 
     .dependencies = .{
         .raylib = .{
-            .url = "git+https://github.com/HeDeAnTheonlyone/raylib-zig?ref=devel#bfb62fc5d81b1d217b38d0acef62afaff9c844c9",
-            .hash = "raylib_zig-5.6.0-dev-KE8RELFEBQB0svOY3w6TCvVDTrgYT-2ACvreMI-NBx-s",
+            .url = "git+https://github.com/HeDeAnTheonlyone/raylib-zig?ref=devel#fd50f4392fdc4a161154a00201838482dcd386dd",
+            .hash = "raylib_zig-5.6.0-dev-KE8REK9HBQAkZZhCXH91nVr9uRUK8l4_QwGvP4O91rrg",
         },
     },
     .paths = .{

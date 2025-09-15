@@ -28,6 +28,7 @@ pub fn init(char: Character) !Self {
 }
 
 pub fn update(self: *Self, delta: f32) !void {
+    if (game_state.paused) return; 
     if (rl.isKeyReleased(.t)) try self.transform();
     try self.char.update(delta);
     updateCamPos(&self.cam, self.char.getCenter());
@@ -40,15 +41,14 @@ pub fn draw(self: *Self) !void {
 /// Transforms between Cerber and Cerby
 fn transform(self: *Self) !void {
     var trans =
-        if (std.mem.eql(u8, self.char.name, "cerby")) try char_spawner.Cerber.spawn(.{ .position = self.char.movement.pos })
-        else try char_spawner.Cerby.spawn(.{ .position = self.char.movement.pos});
+        if (std.mem.eql(u8, self.char.name, "cerby"))
+            try char_spawner.Cerber.spawn(.{ .position = self.char.movement.pos })
+        else
+            try char_spawner.Cerby.spawn(.{ .position = self.char.movement.pos});
 
-    // TODO Fix offsetting the player for correct transformation position
-    trans.movement.pos = trans.movement.pos.add(
-        self.char.animation
-            .getCenter()
-            .subtract(trans.animation.getCenter())
-    );
+    const char_center = self.char.collider.getCenter();
+    const trans_center = trans.collider.getCenter();
+    trans.movement.pos = self.char.movement.pos.add(Vector2.subtract(char_center, trans_center));
 
     if (trans.collider.checkCollisionAtPos(trans.movement.pos)) return;
 

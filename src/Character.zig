@@ -1,6 +1,7 @@
 const std = @import("std");
 const rl = @import("raylib");
 const settings = @import("settings.zig");
+const game_state = @import("game_state.zig");
 const event = @import("event.zig");
 const drawer = @import("drawer.zig");
 const components = @import("components.zig");
@@ -23,18 +24,20 @@ vtable: *const VTable,
 const Self = @This();
 
 pub const VTable = struct {
-    updateVisuals: *const fn(self: *Self) anyerror!void,
+    updateRotation: *const fn(self: *Self) anyerror!void,
     getInputVector: *const fn() Vector2,
 };
 
 pub fn update(self: *Self, delta: f32) !void {
+    // TODO Maybe remove the pause check here and only put it in wrapper structs
+    if (game_state.paused) return;
     try self.moveAndCollide(delta);
-    try self.updateVisuals();
+    try self.updateRotation();
     self.animation.update(delta);
 }
 
-fn updateVisuals(self: *Self) !void {
-    try self.vtable.updateVisuals(self);
+fn updateRotation(self: *Self) !void {
+    try self.vtable.updateRotation(self);
 }
 
 pub fn draw(self: *Self) !void {
@@ -75,11 +78,9 @@ pub fn debugDraw(self: *Self) void {
     }
 }
 
-/// Returns the position of the center point
+/// Returns the position of the logical center point
 pub fn getCenter(self: *Self) Vector2 {
-    return self.collider
-        .getCenter()
-        .add(self.movement.pos);
+    return self.movement.pos.add(self.collider.getCenter());
 }
 
 fn moveAndCollide(self: *Self, delta: f32) !void {

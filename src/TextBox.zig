@@ -10,6 +10,7 @@ const drawer = @import("drawer.zig");
 msg_queue: [max_msg]Message,
 displayed_chars: u32 = 0,
 delay_counter: f32 = 0,
+// TODO make this configurable
 display_delay: f32,
 msg_count: u8 = 0,
 msg_pointer: u8 = 0,
@@ -31,7 +32,7 @@ pub const init = Self{
 };
 const max_msg = 255;
 
-pub const Message = struct {
+const Message = struct {
     text: []const u8,
     // answers: [][]const u8,
 };
@@ -39,7 +40,7 @@ pub const Message = struct {
 pub fn update(self: *Self, delta: f32) !void {
     if (self.msg_count == 0) return;
     
-    // TODO Make this configurable.
+    // TODO Make this configurable
     if (rl.isKeyReleased(.space)) {
         try self.nextMessage();
     }
@@ -70,6 +71,7 @@ pub fn draw(self: *Self) !void {
     rg.setStyle(.label, .{ .control = .text_padding }, 40);
     rg.setStyle(.default, .{ .default = .text_alignment_vertical }, 0);
     rg.setStyle(.default, .{ .default = .text_line_spacing }, 40);
+
     _ = rg.label(rect, self.getCurrentMessage()); 
 }
 
@@ -81,6 +83,7 @@ pub fn enqueuMessageList(self: *Self, msgs: []const Message) !void {
 
 pub fn enqueueMessage(self: *Self, msg: Message) !void {
     if (self.msg_count == max_msg) return error.OutOfMemory;
+    if (msg.text.len >= self.current_msg_text.len) return error.MessageTextTooLong;
 
     self.msg_queue[self.msg_count] = msg;
     self.msg_count += 1;

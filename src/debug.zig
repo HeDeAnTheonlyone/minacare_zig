@@ -11,13 +11,34 @@ pub var show_character_origin = false;
 pub var show_character_center = false;
 pub var show_tile_map_collisions = false;
 
+const Saveable = packed struct {
+    show_fps: *bool,
+    show_character_hitbox: *bool,
+    show_character_origin: *bool,
+    show_character_center: *bool,
+    show_tile_map_collisions: *bool,
+};
+
 comptime {
     if (@import("builtin").mode != .Debug)
         @compileError("The debug module is not allowed in release builds.");
 }
 
+pub fn getSaveable() Saveable {
+    return .{
+        .show_fps = &show_fps,
+        .show_character_hitbox = &show_character_hitbox,
+        .show_character_origin = &show_character_origin,
+        .show_character_center = &show_character_center,
+        .show_tile_map_collisions = &show_tile_map_collisions,
+    };
+}
+
 pub fn drawDebugPanel() void {
-    if (rl.isKeyPressed(.f3)) show_debug_menu = !show_debug_menu;
+    if (rl.isKeyPressed(.f3)) {
+        show_debug_menu = !show_debug_menu;
+        try @import("persistance.zig").save("debug", @This());
+    }
     if (!show_debug_menu) return;
 
     rg.setStyle( .default, .{ .default = .text_size }, 24);
@@ -39,15 +60,15 @@ pub fn drawDebugPanel() void {
 
     const boxes = [_]struct{[:0]const u8, *bool}{
         .{"FPS", &show_fps},
-        .{"Player Hitbox", &show_character_hitbox},
-        .{"Player Origin", &show_character_origin},
-        .{"Player Centerpoint", &show_character_center},
-        .{"Tilemap Collisions", &show_tile_map_collisions},
+        // .{"Player Hitbox", &show_character_hitbox},
+        // .{"Player Origin", &show_character_origin},
+        // .{"Player Centerpoint", &show_character_center},
+        // .{"Tilemap Collisions", &show_tile_map_collisions},
     };
 
     for (boxes, 0..) |box, i| {
         const y_pos: f32 =  @floatFromInt(40 + 30 * i);
-        _ = rg.checkBox(
+        rg.checkBox(
             .{
                 .x = 10,
                 .y = y_pos,
@@ -58,5 +79,4 @@ pub fn drawDebugPanel() void {
             box[1],
         );
     }
-
 }

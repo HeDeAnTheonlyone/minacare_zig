@@ -11,8 +11,11 @@ char: Character,
 cam: rl.Camera2D,
 
 const Self = @This();
+const Saveable = struct {
+    pos: *Vector2,
+};
 
-pub fn init(char: Character) !Self {
+pub fn init(char: Character) !Self {    
     return .{
         .char = char,
         .cam = rl.Camera2D{
@@ -24,6 +27,12 @@ pub fn init(char: Character) !Self {
             .rotation = 0,
             .zoom = 1,
         },
+    };
+}
+
+pub fn getSaveable(self: *Self) Saveable {
+    return .{
+        .pos = &self.char.movement.pos,
     };
 }
 

@@ -11,7 +11,7 @@ const Vector2 = rl.Vector2;
 const DummyError = error{};
 
 pub const AnimationPlayer = struct {
-    texture: *rl.Texture,
+    texture: *rl.Texture2D,
     frame_rect: Rectangle = undefined,
     v_tiles: u8,
     h_tiles: u8,
@@ -28,7 +28,7 @@ pub const AnimationPlayer = struct {
     const Self = @This();
     const max_animations = 32;
 
-    pub const Animation = struct {
+    const Animation = struct {
         name: []const u8,
         start_frame: u16,
         end_frame: u16,
@@ -114,9 +114,21 @@ pub const AnimationPlayer = struct {
         }
     }
 
+    // TODO Maybe make this more performant if neccessary
+    pub fn addAnimationList(self: *Self, anims: []const Animation) !void {
+        for (anims) |anim| {
+            try self.addAnimation(anim);
+        }
+    }
+
     pub fn addAnimation(self: *Self, anim: Animation) !void {
         if (self.animation_count == max_animations) return error.OutOfMemory;
         
+        for (self.animations) |a| {
+            if (std.mem.eql(u8, a.name, anim.name))
+                return error.AnimationAlreadyExists;
+        }
+
         self.animations[self.animation_count] = anim;
         self.animation_count += 1;
         if (self.animation_count == 1) {

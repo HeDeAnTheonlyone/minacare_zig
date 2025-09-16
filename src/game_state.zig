@@ -1,6 +1,9 @@
+//! `game_state` is only responsible to keep track of things during the game play and not the main menu.
+
 const std = @import("std");
 const rl = @import("raylib");
 const settings = @import("settings.zig");
+const persistance = @import("persistance.zig");
 const Allocator = @import("std").mem.Allocator;
 const event = @import("event.zig");
 const TileMap = @import("TileMap.zig");
@@ -24,6 +27,7 @@ pub var events: struct {
     on_update: event.Dispatcher(f32, 128),
     on_draw_world: event.Dispatcher(void, 128),
     on_draw_ui: event.Dispatcher(void, 128),
+    on_exit: event.Dispatcher(void, 16),
 } = undefined;
 
 
@@ -34,6 +38,7 @@ pub fn init() !void {
         .on_update = .init,
         .on_draw_world = .init,
         .on_draw_ui = .init,
+        .on_exit = .init,
     };
     map = TileMap.init(&tile_spritesheet);
     try events.on_draw_world.add(.init(&map, "draw"));
@@ -124,4 +129,13 @@ pub fn pause() !void {
 
 pub fn unpause() !void {
     paused = false;
+}
+
+pub fn exit() !void {
+    try persistance.save("player.zon", &player);
+    try persistance.save("settings.zon", settings);
+    if (@import("builtin").mode == .Debug) {
+        try persistance.save("debug.zon", @import("debug.zig"));
+    }
+    try events.on_exit.dispatch({});
 }

@@ -10,12 +10,16 @@ pub var window_height:i32 = 1080;
 pub var resolution_ratio: f32 = undefined;
 pub const base_framerate = 60;
 pub var target_fps: i32 = 100000;
-pub const tile_size: u8 = 16; // counts for x and y
-pub const chunk_size: u8 = 32; // counts for x and y
 pub const frame_time_cap: f32 = 0.05;
 pub var font: rl.Font = undefined; // needs OpenGL context
+pub const tile_size: u8 = 16; // counts for x and y
+pub const chunk_size: u8 = 32; // counts for x and y
 
-pub const debug = true;
+const Saveable = struct {
+    window_width: *i32,
+    window_height: *i32,
+    target_fps: *i32,
+};
 
 /// Initializes all settings that can not be comptime evaluated
 pub fn init() !void {
@@ -27,6 +31,14 @@ pub fn init() !void {
 
 pub fn deinit() void {
     font.unload();
+}
+
+pub fn getSaveable() Saveable {
+    return .{
+        .window_width = &window_width,
+        .window_height = &window_height,
+        .target_fps = &target_fps,
+    };
 }
 
 pub fn getResolutionRatio() f32 {

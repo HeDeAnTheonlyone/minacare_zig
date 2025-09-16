@@ -65,10 +65,12 @@ pub const Cerber = struct {
             .vtable = &vtable,
         };
 
-        try char.animation.addAnimation(.{ .name = "idle", .start_frame = 128, .end_frame = 128 });
-        try char.animation.addAnimation(.{ .name = "walk_up", .start_frame = 256, .end_frame = 256 });
-        try char.animation.addAnimation(.{ .name = "walk_down", .start_frame = 128, .end_frame = 128 });
-        try char.animation.addAnimation(.{ .name = "walk_side", .start_frame = 384, .end_frame = 384 });
+        try char.animation.addAnimationList(&.{
+            .{ .name = "idle", .start_frame = 128, .end_frame = 128 },
+            .{ .name = "walk_up", .start_frame = 256, .end_frame = 256 },
+            .{ .name = "walk_down", .start_frame = 128, .end_frame = 128 },
+            .{ .name = "walk_side", .start_frame = 384, .end_frame = 384 },
+        });
 
         return char;
     }
@@ -122,8 +124,10 @@ pub const Cerby = struct {
                 .vtable = &vtable,
             };
 
-            try char.animation.addAnimation(.{ .name = "idle", .start_frame = 0, .end_frame = 7 });
-            try char.animation.addAnimation(.{ .name = "walk", .start_frame = 9, .end_frame = 16 });
+            try char.animation.addAnimationList(&.{
+                .{ .name = "idle", .start_frame = 0, .end_frame = 7 },
+                .{ .name = "walk", .start_frame = 9, .end_frame = 16 },
+            });
 
             return char;
     }

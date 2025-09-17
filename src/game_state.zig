@@ -31,7 +31,7 @@ pub var events: struct {
 } = undefined;
 
 
-pub fn init() !void {
+pub fn init(allocator: std.mem.Allocator) !void {
     character_spritesheet = try rl.loadTexture(character_spritehseet_path);
     tile_spritesheet = try rl.loadTexture(tile_spritesheet_path);
     events = .{
@@ -62,25 +62,58 @@ pub fn init() !void {
     try text_box.events.on_popup.add(.init(Self, "pause"));
     try text_box.events.on_close.add(.init(Self, "unpause"));
 
+    try load(allocator);
+    try player.syncTransformation();
+
     // Do a single update to avoid visual glitches if the game gets instant paused.
     try update();
 
     //DEBUG Testing
-    try text_box.enqueuMessageList(&.{
-        .{ .text = "Hello Minawan" },
-        .{ .text = "And others," },
-        .{ .text = "Progress is comming along nicely" },
-        .{ .text = "just look at this cool textbox" },
-        .{ .text = "Still nothing fancy" },
-        .{ .text = "But it hope this will change soon." },
-        .{ .text = "Testing line wrapping: jdsa dsaoid saodsapopüsaofgís9fdugj3wqk wq dwa ßds0ßdf0ßwa0ßfsad fsaß  sßdaodsakßüfgsdag asf f ß0pjsamfsamfsda fsa0fsaß fsa9fsaikfsak fsßf0isak fsajfnsaop igsmpgdfmgs fds gfdsnmgdfs pgfdsp gdnsoljkö lsddflasdsmgöds a öfsda sda dsa fspdjamg sgdpgpdskogpsd j öldsgö" },
-    });
+    // try text_box.enqueuMessageList(&.{
+    //     .{ .text = "Hello Minawan" },
+    //     .{ .text = "And others," },
+    //     .{ .text = "Progress is comming along nicely" },
+    //     .{ .text = "just look at this cool textbox" },
+    //     .{ .text = "Still nothing fancy" },
+    //     .{ .text = "But it hope this will change soon." },
+    //     .{ .text = "Testing line wrapping: jdsa dsaoid saodsapopüsaofgís9fdugj3wqk wq dwa ßds0ßdf0ßwa0ßfsad fsaß  sßdaodsakßüfgsdag asf f ß0pjsamfsamfsda fsa0fsaß fsa9fsaikfsak fsßf0isak fsajfnsaop igsmpgdfmgs fds gfdsnmgdfs pgfdsp gdnsoljkö lsddflasdsmgöds a öfsda sda dsa fspdjamg sgdpgpdskogpsd j öldsgö" },
+    // });
 }
 
 pub fn deinit() void {
     map.deinit();
     character_spritesheet.unload();
     tile_spritesheet.unload();
+}
+
+fn load(allocator: std.mem.Allocator) !void {
+    try persistance.load(
+        allocator,
+        settings,
+        "settings",
+    );
+
+    try persistance.load(
+        allocator,
+        &player,
+        "player",
+    );
+
+    if (@import("builtin").mode == .Debug) {
+        try persistance.load(
+            allocator,
+            @import("debug.zig"),
+            "debug",
+        );
+    }
+}
+
+fn save() !void {
+    try persistance.save(&player, "player");
+    try persistance.save(settings, "settings");
+    if (@import("builtin").mode == .Debug) {
+        try persistance.save(@import("debug.zig"), "debug");
+    }
 }
 
 /// The games root update function
@@ -96,7 +129,7 @@ pub fn update() !void {
 }
 
 /// The games root draw function
-pub fn draw() void {
+pub fn draw() !void {
     rl.beginDrawing();
     defer rl.endDrawing();
     rl.clearBackground(.black);
@@ -109,7 +142,7 @@ pub fn draw() void {
 
     if (@import("builtin").mode == .Debug) {
         const debug = @import("debug.zig");
-        debug.drawDebugPanel();
+        try debug.drawDebugPanel();
         // if (debug.show_fps) @import("drawer.zig").drawFps(.{
         //     .x = 200,
         //     .y = 10,
@@ -132,10 +165,6 @@ pub fn unpause() !void {
 }
 
 pub fn exit() !void {
-    try persistance.save("player.zon", &player);
-    try persistance.save("settings.zon", settings);
-    if (@import("builtin").mode == .Debug) {
-        try persistance.save("debug.zon", @import("debug.zig"));
-    }
+    try save();
     try events.on_exit.dispatch({});
 }

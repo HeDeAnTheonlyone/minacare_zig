@@ -20,7 +20,7 @@ pub fn main() !void {
     try settings.init();
     defer settings.deinit();
 
-    try game_state.init();
+    try game_state.init(gpa);
     defer game_state.deinit();
     
     try game_state.map.loadMap(gpa, "test");
@@ -28,7 +28,7 @@ pub fn main() !void {
     while(!rl.windowShouldClose())
     {
         try game_state.update();
-        game_state.draw();
+        try game_state.draw();
     }
 
     // TODO relocate once the game has a menu to go from instead of closing the game instantly

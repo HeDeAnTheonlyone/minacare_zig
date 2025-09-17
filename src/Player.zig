@@ -9,11 +9,9 @@ const Vector2 = rl.Vector2;
 
 char: Character,
 cam: rl.Camera2D,
+is_transformed: bool = true,
 
 const Self = @This();
-const Saveable = struct {
-    pos: *Vector2,
-};
 
 pub fn init(char: Character) !Self {    
     return .{
@@ -30,9 +28,10 @@ pub fn init(char: Character) !Self {
     };
 }
 
-pub fn getSaveable(self: *Self) Saveable {
+pub fn getSaveable(self: *Self) struct {*Vector2, *bool} {
     return .{
-        .pos = &self.char.movement.pos,
+        &self.char.movement.pos,
+        &self.is_transformed,
     };
 }
 
@@ -47,13 +46,28 @@ pub fn draw(self: *Self) !void {
     try self.char.draw();
 }
 
+pub fn syncTransformation(self: *Self) !void {
+    if (
+        (std.mem.eql(u8, self.char.name, "cerby") and self.is_transformed) or
+        (std.mem.eql(u8, self.char.name, "cerber") and !self.is_transformed)
+    ) return;
+
+    self.is_transformed = !self.is_transformed;
+    try self.transform();
+}
+
 /// Transforms between Cerber and Cerby
 fn transform(self: *Self) !void {
-    var trans =
-        if (std.mem.eql(u8, self.char.name, "cerby"))
-            try char_spawner.Cerber.spawn(.{ .position = self.char.movement.pos })
-        else
-            try char_spawner.Cerby.spawn(.{ .position = self.char.movement.pos});
+    var trans = blk: {
+        if (self.is_transformed) {
+            self.is_transformed = false;
+            break :blk try char_spawner.Cerber.spawn(.{ .position = self.char.movement.pos });
+        }
+        else {
+            self.is_transformed = true;
+            break :blk try char_spawner.Cerby.spawn(.{ .position = self.char.movement.pos});
+        }
+    };
 
     const char_center = self.char.collider.getCenter();
     const trans_center = trans.collider.getCenter();

@@ -15,12 +15,6 @@ pub var font: rl.Font = undefined; // needs OpenGL context
 pub const tile_size: u8 = 16; // counts for x and y
 pub const chunk_size: u8 = 32; // counts for x and y
 
-const Saveable = struct {
-    window_width: *i32,
-    window_height: *i32,
-    target_fps: *i32,
-};
-
 /// Initializes all settings that can not be comptime evaluated
 pub fn init() !void {
     resolution_ratio = getResolutionRatio();
@@ -33,11 +27,11 @@ pub fn deinit() void {
     font.unload();
 }
 
-pub fn getSaveable() Saveable {
+pub fn getSaveable() struct {*i32, *i32, *i32} {
     return .{
-        .window_width = &window_width,
-        .window_height = &window_height,
-        .target_fps = &target_fps,
+        &window_width,
+        &window_height,
+        &target_fps,
     };
 }
 

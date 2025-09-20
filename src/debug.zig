@@ -29,7 +29,7 @@ pub fn getSaveable() struct {*bool, *bool, *bool, *bool, *bool} {
 pub fn drawDebugPanel() !void {
     if (rl.isKeyPressed(.f3)) {
         show_debug_menu = !show_debug_menu;
-        try @import("persistance.zig").save(@This(), "debug");
+        @import("persistance.zig").save(@This(), "debug");
     }
     if (!show_debug_menu) return;
 

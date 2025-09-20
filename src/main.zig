@@ -30,7 +30,4 @@ pub fn main() !void {
         try game_state.update();
         try game_state.draw();
     }
-
-    // TODO relocate once the game has a menu to go from instead of closing the game instantly
-    try game_state.exit();
 }

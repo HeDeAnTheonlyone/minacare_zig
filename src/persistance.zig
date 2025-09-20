@@ -1,8 +1,8 @@
 const std =  @import("std");
 
-/// file name is without the extension.
-/// data is expected to have a `getSaveable()` function.
-pub fn save(comptime data: anytype, comptime file_name: []const u8) !void {
+/// File name is without the extension.
+/// Data is expected to have a `getSaveable()` function.
+pub fn save(comptime data: anytype, comptime file_name: []const u8) void {
     const T, const ptr = switch (@typeInfo(@TypeOf(data))) {
         .pointer => |p| if (@typeInfo(p.child) == .@"struct")
                 .{p.child, @as(?*p.child,@ptrCast(data))}
@@ -16,20 +16,31 @@ pub fn save(comptime data: anytype, comptime file_name: []const u8) !void {
         if (ptr == null) getTypeSaveable(T)
         else getStructSaveable(T, ptr.?);
 
-    var dir = try std.fs.cwd().makeOpenPath("saves", .{});
+    var dir = std.fs.cwd().makeOpenPath("saves", .{}) catch {
+        reportErr(.access, file_name);
+        return;
+    };
     defer dir.close();
-    var file = try dir.createFile(file_name ++ ".zon", .{ .truncate = true });
+    var file = dir.createFile(file_name ++ ".zon", .{ .truncate = true }) catch {
+        reportErr(.access, file_name);
+        return;
+    };
     defer file.close();
 
     var writer = file.writer(&.{});
-    try std.zon.stringify.serialize(
+    std.zon.stringify.serialize(
         saveable_data,
         .{.whitespace = true},
         &writer.interface
-    );
+    ) catch {
+        reportErr(.save, file_name);
+        return;
+    };
 }
 
-pub fn load(allocator: std.mem.Allocator, comptime data: anytype, comptime file_name: []const u8) !void {
+/// File name is without the extension.
+/// Data is expected to have a `getSaveable()` function.
+pub fn load(allocator: std.mem.Allocator, comptime data: anytype, comptime file_name: []const u8) void {
     const T, const ptr = switch (@typeInfo(@TypeOf(data))) {
         .pointer => |p| if (@typeInfo(p.child) == .@"struct")
                 .{p.child, @as(?*p.child,@ptrCast(data))}
@@ -42,13 +53,17 @@ pub fn load(allocator: std.mem.Allocator, comptime data: anytype, comptime file_
     const saveable_data,
     const saveable_field_count =
         comptime blk: { 
-            const saveable = if (ptr == null) getTypeSaveable(T)
+            const saveable =
+                if (ptr == null) getTypeSaveable(T)
                 else getStructSaveable(T, ptr.?);
             const field_count = @typeInfo(@TypeOf(saveable)).@"struct".fields.len;
             break :blk .{saveable, field_count};
         };
 
-    var dir = try std.fs.cwd().makeOpenPath("saves", .{});
+    var dir = std.fs.cwd().makeOpenPath("saves", .{}) catch {
+        reportErr(.access, file_name);
+        return;
+    };
     defer dir.close();
     var file = dir.openFile(
         file_name ++ ".zon",
@@ -58,15 +73,21 @@ pub fn load(allocator: std.mem.Allocator, comptime data: anytype, comptime file_
 
     var buf = [_:0]u8{0} ** 4096;
     var reader = file.reader(&.{});
-    const char_count = try reader.interface.readSliceShort(&buf);
+    const char_count = reader.interface.readSliceShort(&buf) catch {
+        reportErr(.access, file_name);
+        return;
+    };
 
-    const parsed = try std.zon.parse.fromSlice(
+    const parsed = std.zon.parse.fromSlice(
         @TypeOf(saveable_data),
         allocator,
         buf[0..char_count:0],
         null,
         .{},
-    );
+    ) catch {
+        reportErr(.access, file_name);
+        return;
+    };
 
     inline for (0..saveable_field_count) |i| {
         saveable_data[i].* = parsed[i].*;
@@ -85,4 +106,14 @@ fn getStructSaveable(comptime T: type, comptime data: *T)
 {
     const f = @field(T, "getSaveable");
     return f(data);
+}
+
+fn reportErr(action: enum{access, load, save} ,comptime file_name: []const u8) void {
+    var err_writer = std.fs.File.stderr().writer(&.{});
+
+    switch (action) {
+        .access => err_writer.interface.writeAll("Save file " ++ file_name ++ "could not be accessed") catch {},
+        .load => err_writer.interface.writeAll("Save file creation/update for " ++ file_name ++ " failed") catch {},
+        .save => err_writer.interface.writeAll("Save file loading for " ++ file_name ++ " failed") catch {},
+    }
 }

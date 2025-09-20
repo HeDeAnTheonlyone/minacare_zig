@@ -24,10 +24,11 @@ pub var text_box: TextBox = undefined;
 pub var character_spritesheet: rl.Texture2D = undefined;
 pub var tile_spritesheet: rl.Texture2D = undefined;
 pub var events: struct {
-    on_update: event.Dispatcher(f32, 128),
-    on_draw_world: event.Dispatcher(void, 128),
-    on_draw_ui: event.Dispatcher(void, 128),
-    on_exit: event.Dispatcher(void, 16),
+    on_init: event.Dispatcher(void, 8),
+    on_update: event.Dispatcher(f32,32),
+    on_draw_world: event.Dispatcher(void, 32),
+    on_draw_ui: event.Dispatcher(void, 32),
+    on_exit: event.Dispatcher(void, 8),
 } = undefined;
 
 
@@ -35,6 +36,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     character_spritesheet = try rl.loadTexture(character_spritehseet_path);
     tile_spritesheet = try rl.loadTexture(tile_spritesheet_path);
     events = .{
+        .on_init = .init,
         .on_update = .init,
         .on_draw_world = .init,
         .on_draw_ui = .init,
@@ -51,6 +53,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
             }}
         )
     );
+    try events.on_init.add(.init(&player, "syncTransformation"));
     try events.on_update.add(.init(&player, "update"));
     try events.on_draw_world.add(.init(&player, "draw"));
 
@@ -63,44 +66,38 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try text_box.events.on_close.add(.init(Self, "unpause"));
 
     try load(allocator);
-    try player.syncTransformation();
 
     // Do a single update to avoid visual glitches if the game gets instant paused.
     try update();
 
-    //DEBUG Testing
-    // try text_box.enqueuMessageList(&.{
-    //     .{ .text = "Hello Minawan" },
-    //     .{ .text = "And others," },
-    //     .{ .text = "Progress is comming along nicely" },
-    //     .{ .text = "just look at this cool textbox" },
-    //     .{ .text = "Still nothing fancy" },
-    //     .{ .text = "But it hope this will change soon." },
-    //     .{ .text = "Testing line wrapping: jdsa dsaoid saodsapopüsaofgís9fdugj3wqk wq dwa ßds0ßdf0ßwa0ßfsad fsaß  sßdaodsakßüfgsdag asf f ß0pjsamfsamfsda fsa0fsaß fsa9fsaikfsak fsßf0isak fsajfnsaop igsmpgdfmgs fds gfdsnmgdfs pgfdsp gdnsoljkö lsddflasdsmgöds a öfsda sda dsa fspdjamg sgdpgpdskogpsd j öldsgö" },
-    // });
+    try events.on_init.dispatch({});
 }
 
 pub fn deinit() void {
+    save();
+    events.on_exit.dispatch({}) catch unreachable;
+
     map.deinit();
     character_spritesheet.unload();
     tile_spritesheet.unload();
 }
 
+/// Gets and loads save data if available.
 fn load(allocator: std.mem.Allocator) !void {
-    try persistance.load(
+    persistance.load(
         allocator,
         settings,
         "settings",
     );
 
-    try persistance.load(
+    persistance.load(
         allocator,
         &player,
         "player",
     );
 
     if (@import("builtin").mode == .Debug) {
-        try persistance.load(
+        persistance.load(
             allocator,
             @import("debug.zig"),
             "debug",
@@ -108,11 +105,12 @@ fn load(allocator: std.mem.Allocator) !void {
     }
 }
 
-fn save() !void {
-    try persistance.save(&player, "player");
-    try persistance.save(settings, "settings");
+/// Saves the current game state
+fn save() void {
+    persistance.save(&player, "player");
+    persistance.save(settings, "settings");
     if (@import("builtin").mode == .Debug) {
-        try persistance.save(@import("debug.zig"), "debug");
+        persistance.save(@import("debug.zig"), "debug");
     }
 }
 
@@ -162,9 +160,4 @@ pub fn pause() !void {
 
 pub fn unpause() !void {
     paused = false;
-}
-
-pub fn exit() !void {
-    try save();
-    try events.on_exit.dispatch({});
 }

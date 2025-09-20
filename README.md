@@ -11,3 +11,5 @@ There are 3 different positional "systems":
 The function names `update` and `draw` are reserved for a structs main uopdate function and draw functions. They should not be used for something else.
 
 Sprites of animated tiles need to be all next to each other (no line wrapping). The first tile of the animation needs to have a `frames` custom data attached.
+
+Structs that need saving/loading require a `getSaveable()` function that returns an anonymous struct of references to all the variables that should get saved.

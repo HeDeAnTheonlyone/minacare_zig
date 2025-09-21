@@ -67,7 +67,6 @@ pub fn draw(self: *Self) !void {
 
 
     rg.setStyle(.default, .{ .default = .text_size }, 32);
-    rg.setStyle(.label, .{ .control = .text_color_normal }, rl.colorToInt(.black));
     rg.setStyle(.label, .{ .control = .text_padding }, 40);
     rg.setStyle(.default, .{ .default = .text_alignment_vertical }, 0);
     rg.setStyle(.default, .{ .default = .text_line_spacing }, 40);

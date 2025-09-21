@@ -18,7 +18,7 @@ pub fn init(char: Character) !Self {
         .char = char,
         .cam = rl.Camera2D{
             .target = undefined,
-            .offset = rl.Vector2{
+            .offset = .{
                 .x = @as(f32, @floatFromInt(@divFloor(settings.window_width, 2))) - settings.tile_size / 2,
                 .y = @as(f32, @floatFromInt(@divFloor(settings.window_height, 2))) - settings.tile_size / 2,
             },
@@ -79,5 +79,14 @@ fn transform(self: *Self) !void {
 }
 
 fn updateCamPos(cam: *rl.Camera2D, pos: Vector2) void {
-    cam.target = pos.scale(settings.resolution_ratio);
+    cam.target = pos.multiply(settings.resolution_ratio);
 }
+
+pub fn recenter(self: *Self) void {
+    const char_offset = self.char.animation.getCenter();
+
+    self.cam.offset = .{
+        .x = @as(f32, @floatFromInt(@divFloor(settings.window_width, 2))) - char_offset.x,
+        .y = @as(f32, @floatFromInt(@divFloor(settings.window_height, 2))) - char_offset.y,
+    };
+} 

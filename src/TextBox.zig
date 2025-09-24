@@ -59,9 +59,9 @@ pub fn draw(self: *Self) !void {
 
     const rect = rl.Rectangle.init(
         50,
-        @as(f32, @floatFromInt(settings.window_height)) * 0.7,
-        @floatFromInt(settings.window_width - 100),
-        @floatFromInt(@divFloor(settings.window_height, 4)),
+        @as(f32, @floatFromInt(settings.render_height)) * 0.7,
+        @floatFromInt(settings.render_width - 100),
+        @floatFromInt(@divFloor(settings.render_height, 4)),
     );
     rl.drawRectangleRounded(rect, 0.2, 5, .white);
 

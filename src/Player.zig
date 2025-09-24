@@ -19,8 +19,8 @@ pub fn init(char: Character) !Self {
         .cam = rl.Camera2D{
             .target = undefined,
             .offset = .{
-                .x = @as(f32, @floatFromInt(@divFloor(settings.window_width, 2))) - settings.tile_size / 2,
-                .y = @as(f32, @floatFromInt(@divFloor(settings.window_height, 2))) - settings.tile_size / 2,
+                .x = @as(f32, @floatFromInt(@divFloor(settings.render_width, 2))) - settings.tile_size / 2,
+                .y = @as(f32, @floatFromInt(@divFloor(settings.render_height, 2))) - settings.tile_size / 2,
             },
             .rotation = 0,
             .zoom = 1,
@@ -46,14 +46,17 @@ pub fn draw(self: *Self) !void {
     try self.char.draw();
 }
 
+/// Syncs the visual transformation with the internal transformation state.
 pub fn syncTransformation(self: *Self) !void {
     if (
         (std.mem.eql(u8, self.char.name, "cerby") and self.is_transformed) or
         (std.mem.eql(u8, self.char.name, "cerber") and !self.is_transformed)
     ) return;
 
+    const pos = self.char.movement.pos;
     self.is_transformed = !self.is_transformed;
     try self.transform();
+    self.char   .movement.pos = pos;
 }
 
 /// Transforms between Cerber and Cerby
@@ -82,11 +85,11 @@ fn updateCamPos(cam: *rl.Camera2D, pos: Vector2) void {
     cam.target = pos.multiply(settings.resolution_ratio);
 }
 
-pub fn recenter(self: *Self) void {
+pub fn recenterCam(self: *Self) void {
     const char_offset = self.char.animation.getCenter();
 
     self.cam.offset = .{
-        .x = @as(f32, @floatFromInt(@divFloor(settings.window_width, 2))) - char_offset.x,
-        .y = @as(f32, @floatFromInt(@divFloor(settings.window_height, 2))) - char_offset.y,
+        .x = @as(f32, @floatFromInt(@divFloor(settings.render_width, 2))) - char_offset.x,
+        .y = @as(f32, @floatFromInt(@divFloor(settings.render_height, 2))) - char_offset.y,
     };
 } 

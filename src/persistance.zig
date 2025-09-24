@@ -1,8 +1,19 @@
 const std =  @import("std");
 
+/// Names for all save files.
+const save_files = enum {
+    debug,
+    settings,
+    player,
+};
+
+const deletable_files = enum {
+    player,
+};
+
 /// File name is without the extension.
 /// Data is expected to have a `getSaveable()` function.
-pub fn save(comptime data: anytype, comptime file_name: []const u8) void {
+pub fn save(comptime data: anytype, comptime save_file: save_files) void {
     const T, const ptr = switch (@typeInfo(@TypeOf(data))) {
         .pointer => |p| if (@typeInfo(p.child) == .@"struct")
                 .{p.child, @as(?*p.child,@ptrCast(data))}
@@ -15,6 +26,7 @@ pub fn save(comptime data: anytype, comptime file_name: []const u8) void {
     const saveable_data =
         if (ptr == null) getTypeSaveable(T)
         else getStructSaveable(T, ptr.?);
+    const file_name = @tagName(save_file);
 
     var dir = std.fs.cwd().makeOpenPath("saves", .{}) catch {
         reportErr(.access, file_name);
@@ -40,7 +52,7 @@ pub fn save(comptime data: anytype, comptime file_name: []const u8) void {
 
 /// File name is without the extension.
 /// Data is expected to have a `getSaveable()` function.
-pub fn load(allocator: std.mem.Allocator, comptime data: anytype, comptime file_name: []const u8) void {
+pub fn load(allocator: std.mem.Allocator, comptime data: anytype, comptime save_file: save_files) void {
     const T, const ptr = switch (@typeInfo(@TypeOf(data))) {
         .pointer => |p| if (@typeInfo(p.child) == .@"struct")
                 .{p.child, @as(?*p.child,@ptrCast(data))}
@@ -59,6 +71,7 @@ pub fn load(allocator: std.mem.Allocator, comptime data: anytype, comptime file_
             const field_count = @typeInfo(@TypeOf(saveable)).@"struct".fields.len;
             break :blk .{saveable, field_count};
         };
+    const file_name = @tagName(save_file);
 
     var dir = std.fs.cwd().makeOpenPath("saves", .{}) catch {
         reportErr(.access, file_name);
@@ -91,6 +104,30 @@ pub fn load(allocator: std.mem.Allocator, comptime data: anytype, comptime file_
 
     inline for (0..saveable_field_count) |i| {
         saveable_data[i].* = parsed[i].*;
+    }
+}
+
+/// Deletes all the game's progress but not the settings.
+pub fn delete() !void {
+    var dir = try std.fs.cwd().openDir("saves", .{.iterate = true});
+    defer dir.close();
+
+    var iter  = dir.iterate();
+
+    // TODO maybe just change the name of the files to backup_<file name>.zon
+
+    outer: while (try iter.next()) |entry| {
+        switch (entry.kind) {
+            .file =>  {
+                _ = std.meta.stringToEnum(
+                    deletable_files,
+                    entry.name[0..entry.name.len - 4],
+                ) orelse continue :outer;
+                
+                try dir.deleteFile(entry.name);
+            },
+            else => {},
+        }
     }
 }
 

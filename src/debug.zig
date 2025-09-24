@@ -29,7 +29,7 @@ pub fn getSaveable() struct {*bool, *bool, *bool, *bool, *bool} {
 pub fn drawDebugPanel() !void {
     if (rl.isKeyPressed(.f3)) {
         show_debug_menu = !show_debug_menu;
-        @import("persistance.zig").save(@This(), "debug");
+        @import("persistance.zig").save(@This(), .debug);
     }
     if (!show_debug_menu) return;
 
@@ -44,13 +44,13 @@ pub fn drawDebugPanel() !void {
         .{
             .x = 0,
             .y = 0,
-            .width = @floatFromInt(@divFloor(settings.window_width, 4)),
-            .height = @floatFromInt(settings.window_height),
+            .width = @floatFromInt(@divFloor(settings.render_width, 4)),
+            .height = @floatFromInt(settings.render_height),
         },
         "Debug Display Panel",
     );
 
-    const boxes = [_]struct{[:0]const u8, *bool}{
+    const check_boxes = [_]struct{[:0]const u8, *bool}{
         .{"FPS", &show_fps},
         .{"Player Hitbox", &show_character_hitbox},
         .{"Player Origin", &show_character_origin},
@@ -58,7 +58,7 @@ pub fn drawDebugPanel() !void {
         .{"Tilemap Collisions", &show_tile_map_collisions},
     };
 
-    for (boxes, 0..) |box, i| {
+    for (check_boxes, 0..) |box, i| {
         const y_pos: f32 =  @floatFromInt(40 + 30 * i);
         _ =rg.checkBox(
             .{

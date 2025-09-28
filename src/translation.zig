@@ -63,23 +63,24 @@ fn generateTranslationMap(allocator: Allocator, file: std.fs.File) !void {
 
     var first_loop = true;
     while (true) {
-        _ = reader.interface.streamDelimiter(&writer, '\n') catch |err| {
+        const count = reader.interface.streamDelimiter(&writer, '\n') catch |err|
             switch (err) {
-                error.EndOfStream => {},
+                error.EndOfStream => writer.end,
                 else => return err,
-            }
-        };
+            };
 
-        if (first_loop) first_loop = false
-        else {
-            try registerTranslation(
-                allocator,
-                writer.buffered(),
-                settings.selected_language
-            );
+        if (count != 1) {
+            if (first_loop) first_loop = false
+            else {
+                try registerTranslation(
+                    allocator,
+                    writer.buffered(),
+                    settings.selected_language
+                );
+            }
+
+            if (reader.atEnd()) break;
         }
-        
-        if (reader.atEnd()) break;
         reader.interface.toss(1);
         writer.end = 0;
     }
@@ -91,12 +92,14 @@ fn registerTranslation(allocator: Allocator, csvLine: []const u8, language_index
 
     const key = iter.first();
     if (language_index > 0)
-        for (0..language_index) |_| { _ = iter.next().?; };
+        for (0..language_index) |_| { _ = iter.next() orelse return; };
     const value = blk: {
         const v = iter.next() orelse "ERROR";
         if (v.len == 0) break :blk "ERROR"
         else break :blk v;
     };
+
+    std.debug.print("{s} - {s}\n", .{key, value});
 
     try dictionary.put(
         allocator,

@@ -23,10 +23,10 @@ pub fn save(comptime data: anytype, comptime save_file: save_files) void {
         else => @compileError("Only types and pointer to structs allowed"),
     };
 
+    const file_name = @tagName(save_file);
     const saveable_data =
         if (ptr == null) getTypeSaveable(T)
         else getStructSaveable(T, ptr.?);
-    const file_name = @tagName(save_file);
 
     var dir = std.fs.cwd().makeOpenPath("saves", .{}) catch {
         reportErr(.access, file_name);
@@ -62,6 +62,7 @@ pub fn load(allocator: std.mem.Allocator, comptime data: anytype, comptime save_
         else => @compileError("Only types and pointer to structs allowed"),
     };
 
+    const file_name = @tagName(save_file);
     const saveable_data,
     const saveable_field_count =
         comptime blk: { 
@@ -71,7 +72,6 @@ pub fn load(allocator: std.mem.Allocator, comptime data: anytype, comptime save_
             const field_count = @typeInfo(@TypeOf(saveable)).@"struct".fields.len;
             break :blk .{saveable, field_count};
         };
-    const file_name = @tagName(save_file);
 
     var dir = std.fs.cwd().makeOpenPath("saves", .{}) catch {
         reportErr(.access, file_name);

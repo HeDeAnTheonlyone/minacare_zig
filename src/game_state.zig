@@ -42,7 +42,7 @@ pub fn init() !void {
         .on_exit = .init,
     };
     map = TileMap.init(&tile_spritesheet);
-    try events.on_draw_world.add(.init(&map, "draw"));
+    try events.on_draw_world.add(.init(&map, "draw", 100));
     
     player = try Player.init(
         try char_spawner.Cerby.spawn(
@@ -52,17 +52,17 @@ pub fn init() !void {
             }}
         )
     );
-    try events.on_load.add(.init(&player, "syncTransformation"));
-    try events.on_update.add(.init(&player, "update"));
-    try events.on_draw_world.add(.init(&player, "draw"));
+    try events.on_load.add(.init(&player, "syncTransformation", 0));
+    try events.on_update.add(.init(&player, "update", 0));
+    try events.on_draw_world.add(.init(&player, "draw", 0));
 
-    try player.char.movement.events.on_pos_changed.add(.init(&map, "updateTileRenderCache"));
+    try player.char.movement.events.on_pos_changed.add(.init(&map, "updateTileRenderCache", 0));
 
     text_box = .init;
-    try events.on_draw_ui.add(.init(&text_box, "draw"));
-    try events.on_update.add(.init(&text_box, "update"));
-    try text_box.events.on_popup.add(.init(Self, "pause"));
-    try text_box.events.on_close.add(.init(Self, "unpause"));
+    try events.on_draw_ui.add(.init(&text_box, "draw", 0));
+    try events.on_update.add(.init(&text_box, "update", 0));
+    try text_box.events.on_popup.add(.init(Self, "pause", 0));
+    try text_box.events.on_close.add(.init(Self, "unpause", 0));
 }
 
 pub fn deinit() void {

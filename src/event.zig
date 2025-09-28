@@ -4,10 +4,11 @@ pub fn Callback(comptime param_type: type) type {
     return struct {
         func: *const fn(ctx: ?*anyopaque, args: param_type) anyerror!void,
         ctx: ?*anyopaque,
+        priority: i32 = 0,
 
         const Self = @This();
 
-        pub fn init(comptime ctx: anytype, comptime fn_name: []const u8) Self {
+        pub fn init(comptime ctx: anytype, comptime fn_name: []const u8, comptime priority: i32) Self {
             return switch (@typeInfo(@TypeOf(ctx))) {
                 .pointer => |p| blk: {
                     const T = p.child;
@@ -15,11 +16,13 @@ pub fn Callback(comptime param_type: type) type {
                     break :blk .{
                         .func = createPointerAdapterFn(T, fn_name),
                         .ctx = ctx,
+                        .priority = priority,
                     };
                 },
                 .type => .{
                         .func = createTypeAdapterFn(ctx, fn_name),
                         .ctx = null,
+                        .priority = priority,
                     },
                 else => @compileError("Callback context has to be a pointer or type."),
             };
@@ -79,10 +82,10 @@ pub fn Callback(comptime param_type: type) type {
     };
 }
 
-pub fn Dispatcher(comptime param_type: type, comptime max_callbacks: usize) type {
+pub fn Dispatcher(comptime param_type: type, comptime max_callbacks: u32) type {
     return struct {
         callback_list: [max_callbacks]Callback(param_type),
-        callback_count: u8,
+        callback_count: u32,
 
         const Self = @This();
         pub const init = Self{.callback_list = undefined, .callback_count = 0};
@@ -93,9 +96,21 @@ pub fn Dispatcher(comptime param_type: type, comptime max_callbacks: usize) type
             }
         }
 
-        pub fn add(self: *Self, callback: Callback(param_type)) anyerror!void {
+        pub fn add(self: *Self, callback: Callback(param_type)) !void {
             if (self.callback_count == max_callbacks) return error.OutOfMemory;
-            self.callback_list[self.callback_count] = callback;
+            
+            const index = for (0..self.callback_count) |i| {
+                if (self.callback_list[i].priority < callback.priority) {
+                    @memmove(
+                        self.callback_list[i + 1..self.callback_count + 1],
+                        self.callback_list[i..self.callback_count]
+                    );
+                    break i;
+                }
+            }
+            else self.callback_count;
+
+            self.callback_list[index] = callback;
             self.callback_count += 1;
         }
 
@@ -104,9 +119,13 @@ pub fn Dispatcher(comptime param_type: type, comptime max_callbacks: usize) type
             for (0..self.callback_count) |i| {
                 if (
                     self.callback_list[i].func == callback.func and
-                    self.callback_list[i].ctx == callback.ctx
+                    self.callback_list[i].ctx == callback.ctx and
+                    self.callback_list[i].priority == callback.priority
                 ) {
-                    self.callback_list[i] = self.callback_list[self.callback_count - 1];
+                    @memmove(
+                        self.callback_list[i..self.callback_count],
+                        self.callback_list[i + 1..self.callback_count + 1]
+                    );
                     self.callback_count -= 1;
                 }
             };

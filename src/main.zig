@@ -1,15 +1,11 @@
 const std = @import("std");
 const rl = @import("raylib");
-const settings = @import("settings.zig");
+const app_context = @import("app_context.zig");
 const app_state = @import("app_state.zig");
+const settings = @import("settings.zig");
+const persistance = @import("persistance.zig");
 const game_state = @import("game_state.zig");
 const menus = @import("menus.zig");
-var debug_allocator = std.heap.DebugAllocator(.{}).init;
-const gpa = switch (@import("builtin").mode) {
-    .Debug => debug_allocator.allocator(),
-    else => std.heap.smp_allocator,
-};
-
 const translation = @import("translation.zig");
 
 pub fn main() !void {
@@ -24,17 +20,18 @@ pub fn main() !void {
 
     try settings.init();
     defer settings.deinit();
+    persistance.load(settings, .settings);
 
     rl.setTargetFPS(settings.target_fps);
 
-    try translation.init(gpa);
-    defer translation.deinit(gpa);
+    try translation.init(app_context.gpa);
+    defer translation.deinit(app_context.gpa);
 
     try game_state.init();
     defer game_state.deinit();
 
     // DEBUG switch out for real map later
-    try game_state.map.loadMap(gpa, "test");
+    try game_state.map.loadMap(app_context.gpa, "test");
 
     game_loop: while(!rl.windowShouldClose())
     {
@@ -52,12 +49,12 @@ pub fn main() !void {
         // DEBUG end
 
         const delta = std.math.clamp(
-        rl.getFrameTime(),
-        0,
-        settings.frame_time_cap
-    );
+            rl.getFrameTime(),
+            0,
+            settings.frame_time_cap
+        );
 
-        state: switch (app_state.state) {
+        switch (app_state.current) {
             .menu => {
                 try menus.main.update(delta);
                 
@@ -66,17 +63,6 @@ pub fn main() !void {
                 rl.clearBackground(.white);
                 
                 menus.main.draw();
-            },
-            .load_game => {
-                try game_state.loadGame(gpa);
-                app_state.state = .game;
-                continue :state app_state.state;
-            },
-            .new_game => {
-                // TODO prompt the user for confirmation.
-                try game_state.newGame();
-                app_state.state = .game;
-                continue :state app_state.state;
             },
             .game => {
                 try game_state.update(delta);
@@ -105,6 +91,7 @@ pub fn main() !void {
                 menus.settings.draw();
             },
             .exit => break :game_loop,
+            else => unreachable,
         }
     }
 }

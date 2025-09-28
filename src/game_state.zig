@@ -105,22 +105,14 @@ pub fn draw() !void {
 }
 
 /// Gets and loads save data if available.
-fn load(allocator: std.mem.Allocator) !void {
+fn load() !void {
     persistance.load(
-        allocator,
-        settings,
-        .settings,
-    );
-
-    persistance.load(
-        allocator,
         &player,
         .player,
     );
 
     if (@import("builtin").mode == .Debug) {
         persistance.load(
-            allocator,
             @import("debug.zig"),
             .debug,
         );
@@ -132,15 +124,14 @@ fn load(allocator: std.mem.Allocator) !void {
 /// Saves the current game state
 fn save() void {
     persistance.save(&player, .player);
-    persistance.save(settings, .settings);
     if (@import("builtin").mode == .Debug) {
         persistance.save(@import("debug.zig"), .debug);
     }
 }
 
 /// Continue the game by loading the saved progress.
-pub fn loadGame(allocator: Allocator) !void {
-    try load(allocator);
+pub fn loadGame() !void {
+    try load();
 }
 
 /// Delete progress and start game fresh.

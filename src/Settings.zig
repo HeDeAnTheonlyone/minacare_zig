@@ -1,7 +1,6 @@
 const std = @import("std");
 const rl = @import("raylib");
 const rg = @import("raygui");
-const translation = @import("translation.zig");
 
 pub var font: rl.Font = undefined; // needs OpenGL context
 /// Only use this value in display/drawing context.
@@ -13,7 +12,7 @@ pub const native_height: i32 = 360;
 pub var render_width: i32 = undefined;
 pub var render_height:i32 = undefined;
 pub const base_framerate = 60;
-pub var target_fps: i32 = 100000;
+pub var target_fps: i32 = 100000000;
 pub const frame_time_cap: f32 = 0.05;
 pub var text_speed: f32 = 0.02;
 pub var selected_language: u8 = 1;
@@ -29,6 +28,7 @@ pub fn init() !void {
     rg.setFont(font);
     rg.setStyle(.default, .{ .default = .text_wrap_mode }, 1);
     rg.setStyle(.label, .{ .control = .text_color_normal }, rl.colorToInt(.black));
+
 }
 
 pub fn deinit() void {

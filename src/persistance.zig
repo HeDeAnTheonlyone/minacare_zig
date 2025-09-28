@@ -1,4 +1,5 @@
 const std =  @import("std");
+const app_context = @import("app_context.zig");
 
 /// Names for all save files.
 const save_files = enum {
@@ -52,7 +53,7 @@ pub fn save(comptime data: anytype, comptime save_file: save_files) void {
 
 /// File name is without the extension.
 /// Data is expected to have a `getSaveable()` function.
-pub fn load(allocator: std.mem.Allocator, comptime data: anytype, comptime save_file: save_files) void {
+pub fn load(comptime data: anytype, comptime save_file: save_files) void {
     const T, const ptr = switch (@typeInfo(@TypeOf(data))) {
         .pointer => |p| if (@typeInfo(p.child) == .@"struct")
                 .{p.child, @as(?*p.child,@ptrCast(data))}
@@ -93,7 +94,7 @@ pub fn load(allocator: std.mem.Allocator, comptime data: anytype, comptime save_
 
     const parsed = std.zon.parse.fromSlice(
         @TypeOf(saveable_data),
-        allocator,
+        app_context.gpa,
         buf[0..char_count:0],
         null,
         .{},

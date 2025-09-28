@@ -4,6 +4,7 @@ const rg = @import("raygui");
 const stg = @import("settings.zig");
 const app_state = @import("app_state.zig");
 const game_state = @import("game_state.zig");
+const persistance = @import("persistance.zig");
 const translation = @import("translation.zig");
 const Rectangle = rl.Rectangle;
 const Vector2 = rl.Vector2;
@@ -17,11 +18,11 @@ pub const main = struct {
     var exit: bool = false;
 
     pub fn update(_: f32) !void {
-        app_state.state = if (load_game) .load_game
-            else if (new_game) .new_game
-            else if (settings_) .settings
-            else if (exit) .exit
-            else .menu;
+        if (load_game) try app_state.switchTo(.load_game)
+            else if (new_game) try app_state.switchTo(.new_game)
+            else if (settings_) try app_state.switchTo(.settings)
+            else if (exit) try app_state.switchTo(.exit)
+            else try app_state.switchTo(.menu);
     } 
 
     pub fn draw() void {
@@ -66,10 +67,10 @@ pub const settings= struct {
         var selected: i32 = 0;
         const text = blk: {
             var txt: [:0]const u8 = "";
-            const name_list = std.meta.fieldNames(values);
-            for (name_list, 0..) |name, i| {
+            const fps_list = std.meta.fieldNames(values);
+            for (fps_list, 0..) |name, i| {
                 txt =
-                    if (i == name_list.len - 1) txt ++ name
+                    if (i == fps_list.len - 1) txt ++ name
                     else txt ++ name ++ ";";
             }
             break :blk txt;
@@ -82,11 +83,35 @@ pub const settings= struct {
             @"240" = 240,
             uncapped = 100_000_000,
         };
+
+        /// Figures out at what index the given fps are and sets this as the `selected` value.
+        fn setSelected(target_fps: i32) void {
+            const fps_list = std.meta.fieldNames(values);
+            
+            var buf: [16]u8 = undefined; 
+            var w = std.io.Writer.fixed(&buf);
+            const fps_str = blk: {
+                w.print("{d}", .{target_fps}) catch break :blk "60";
+                break :blk w.buffered();
+            };
+
+            const index = for (0..fps_list.len) |i| {
+                if (std.mem.eql(u8, fps_list[i], fps_str)) break i;
+            }
+            else 0;
+
+            selected = @intCast(index);
+            prev_selected = @intCast(index);
+        }
     };
 
 
     pub fn update(_: f32) !void {
-        
+        if (fps.selected != fps.prev_selected) {
+            fps.prev_selected = fps.selected;
+            stg.target_fps = @intCast(@intFromEnum(std.enums.values(fps.values)[@intCast(fps.selected)]));
+            save();
+        }
     }
 
     pub fn draw() void {
@@ -103,6 +128,14 @@ pub const settings= struct {
                 fps.edit_mode,
             ) == 1
         ) fps.edit_mode = !fps.edit_mode;
+    }
+
+    pub fn syncSettings() void {
+        fps.setSelected(stg.target_fps);
+    }
+
+    fn save() void {
+        persistance.save(stg, .settings);
     }
 };
 

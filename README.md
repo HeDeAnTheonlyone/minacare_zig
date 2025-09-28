@@ -13,3 +13,6 @@ The function names `update` and `draw` are reserved for a structs main uopdate f
 Sprites of animated tiles need to be all next to each other (no line wrapping). The first tile of the animation needs to have a `frames` custom data attached.
 
 Structs that need saving/loading require a `getSaveable()` function that returns an anonymous struct of references to all the variables that should get saved.
+
+IMPORTANT:
+Aways use the gpa allocator to init or deinit objects unless described otherwise.

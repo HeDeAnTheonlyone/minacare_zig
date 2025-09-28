@@ -86,7 +86,7 @@ pub const settings= struct {
 
 
     pub fn update(_: f32) !void {
-        std.debug.print("{s}\n", .{fps.text});
+        
     }
 
     pub fn draw() void {

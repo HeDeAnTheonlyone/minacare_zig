@@ -28,7 +28,7 @@ pub fn main() !void {
     rl.setTargetFPS(settings.target_fps);
 
     try translation.init(gpa);
-    defer translation.deinit();
+    defer translation.deinit(gpa);
 
     try game_state.init();
     defer game_state.deinit();

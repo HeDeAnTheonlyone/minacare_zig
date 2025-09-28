@@ -1,6 +1,7 @@
 const std = @import("std");
 const rl = @import("raylib");
 const rg = @import("raygui");
+const translation = @import("translation.zig");
 
 pub var font: rl.Font = undefined; // needs OpenGL context
 /// Only use this value in display/drawing context.
@@ -15,19 +16,11 @@ pub const base_framerate = 60;
 pub var target_fps: i32 = 100000;
 pub const frame_time_cap: f32 = 0.05;
 pub var text_speed: f32 = 0.02;
-pub var language: Language = .de;
+pub var selected_language: u8 = 1;
 pub const tile_size: u8 = 16; // counts for x and y
 pub const chunk_size: u8 = 32; // counts for x and y
 pub var is_borderless: bool = false;
 
-const Language = enum{
-    // TODO make this dynamic based on the translation file.
-    en,
-    de,
-    fr, // not implemented
-    sp, // not implemented
-    // others
-};
 
 /// Initializes all settings that can not be comptime evaluated
 pub fn init() !void {
@@ -42,13 +35,13 @@ pub fn deinit() void {
     font.unload();
 }
 
-pub fn getSaveable() struct {*i32, *i32, *i32, *f32, *Language, *bool} {
+pub fn getSaveable() struct {*i32, *i32, *i32, *f32, *u8, *bool} {
     return .{
         &render_width,
         &render_height,
         &target_fps,
         &text_speed,
-        &language,
+        &selected_language,
         &is_borderless,
     };
 }
@@ -71,3 +64,5 @@ pub fn updateRenderSize() void {
     render_height = rl.getRenderHeight();
     resolution_ratio = getResolutionRatio();
 }
+
+

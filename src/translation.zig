@@ -6,32 +6,62 @@ const Allocator = std.mem.Allocator;
 
 const csvSeparator = ';';
 var arena: std.heap.ArenaAllocator = undefined;
+pub var languages: Languages = undefined; 
 pub var dictionary: std.StringHashMapUnmanaged([:0]const u8) = undefined;
 
 pub fn init(allocator: Allocator) !void {
     arena = std.heap.ArenaAllocator.init(allocator);
-    try generateTranslationMap(arena.allocator());
+    try loadTranslationData(allocator);
 }
 
-pub fn deinit() void {
+pub fn deinit(allocator: Allocator) void {
     arena.deinit();
+    for (0..languages.len) |i| {
+        allocator.free(languages[i]);
+    }
+    allocator.free(languages);
 }
 
-fn generateTranslationMap(allocator: Allocator) !void {
-    dictionary = .empty;
-    try dictionary.ensureTotalCapacity(allocator, 1024);
-
+fn loadTranslationData(scratch_allocator: Allocator) !void {
     var dir = try std.fs.cwd().openDir("assets/translation", .{});
     defer dir.close();
     var file = try dir.openFile("translation.csv", .{ .mode = .read_only });
     defer file.close();
+
+    try generateAvailableLanguagesList(scratch_allocator, file);
+    try file.seekTo(0);
+    try generateTranslationMap(arena.allocator(), file);
+}
+
+fn generateAvailableLanguagesList(allocator: Allocator, file: std.fs.File) !void {
+    var r_buf: [4096]u8 = undefined;
+    var w_buf: [4096]u8 = undefined;
+    var reader = file.reader(&r_buf);
+    var writer = std.io.Writer.fixed(&w_buf);
+    
+    _ = try reader.interface.streamDelimiter(&writer, '\n');
+    const lang_count = std.mem.count(u8, writer.buffered(), &.{csvSeparator});
+    languages = try allocator.alloc([:0]const u8, lang_count);
+
+    var iter = std.mem.splitScalar(u8, writer.buffered(), csvSeparator);
+    _ = iter.first();
+
+    var index: u8 = 0;
+    while(iter.next()) |lang| : (index += 1) {
+        languages[index] = try allocator.dupeZ(u8, lang);
+    }
+}
+
+fn generateTranslationMap(allocator: Allocator, file: std.fs.File) !void {
+    dictionary = .empty;
+    try dictionary.ensureTotalCapacity(allocator, 1024);
 
     var r_buf: [1024 * 64]u8 = undefined;
     var w_buf: [4096]u8 = undefined;
     var reader = file.reader(&r_buf);
     var writer = std.io.Writer.fixed(&w_buf);
 
-    var language_index: u8 = 0;
+    var first_loop = true;
     while (true) {
         _ = reader.interface.streamDelimiter(&writer, '\n') catch |err| {
             switch (err) {
@@ -40,19 +70,12 @@ fn generateTranslationMap(allocator: Allocator) !void {
             }
         };
 
-        if (language_index == 0) { // index 0 is for translation keys
-            var iter = std.mem.splitScalar(u8, writer.buffered(), csvSeparator);
-            var index: u8 = 0;
-            while (iter.next()) |lang| : (index += 1) {
-                if (std.mem.eql(u8, lang, @tagName(settings.language))) break;
-            }
-            language_index = index;
-        }
+        if (first_loop) first_loop = false
         else {
             try registerTranslation(
                 allocator,
                 writer.buffered(),
-                language_index
+                settings.selected_language
             );
         }
         
@@ -65,10 +88,10 @@ fn generateTranslationMap(allocator: Allocator) !void {
 fn registerTranslation(allocator: Allocator, csvLine: []const u8, language_index: u8) !void {
     std.debug.assert(csvLine.len != 0);
     var iter = std.mem.splitScalar(u8, csvLine, csvSeparator);
-    
+
     const key = iter.first();
-    if (language_index - 1 > 0)
-        for (0..language_index - 1) |_| { _ = iter.next().?; };
+    if (language_index > 0)
+        for (0..language_index) |_| { _ = iter.next().?; };
     const value = blk: {
         const v = iter.next() orelse "ERROR";
         if (v.len == 0) break :blk "ERROR"
@@ -82,11 +105,24 @@ fn registerTranslation(allocator: Allocator, csvLine: []const u8, language_index
     );
 }
 
+pub fn reloadTranslationData() !void {
+    arena.reset(.retain_capacity);
+
+    var dir = try std.fs.cwd().openDir("assets/translation", .{});
+    defer dir.close();
+    var file = try dir.openFile("translation.csv", .{ .mode = .read_only });
+    defer file.close();
+
+    generateTranslationMap(arena.allocator(), file);
+}
+
+pub const Languages = [][:0]const u8;
+
 pub const Translatable = struct {
     id: []const u8,
     text: ?[:0]const u8 = null,
 
-    /// Caches and returns the translation.
+    /// Caches and returns the translated string.
     pub fn translate(self: *const Translatable) [:0]const u8 {
         if (self.text == null) @constCast(self).text = dictionary.get(self.id).?;
         return self.text.?;

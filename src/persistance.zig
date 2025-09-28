@@ -148,6 +148,8 @@ fn getStructSaveable(comptime T: type, comptime data: *T)
 fn reportErr(action: enum{access, load, save} ,comptime file_name: []const u8) void {
     var err_writer = std.fs.File.stderr().writer(&.{});
 
+    // TODO maybe think of a different way to show the error.
+
     switch (action) {
         .access => err_writer.interface.writeAll("Save file " ++ file_name ++ "could not be accessed") catch {},
         .load => err_writer.interface.writeAll("Save file creation/update for " ++ file_name ++ " failed") catch {},

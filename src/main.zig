@@ -3,13 +3,14 @@ const rl = @import("raylib");
 const settings = @import("settings.zig");
 const app_state = @import("app_state.zig");
 const game_state = @import("game_state.zig");
-const main_menu = @import("main_menu.zig");
-const settings_menu = @import("menus/main_menu.zig");
+const menus = @import("menus.zig");
 var debug_allocator = std.heap.DebugAllocator(.{}).init;
 const gpa = switch (@import("builtin").mode) {
     .Debug => debug_allocator.allocator(),
     else => std.heap.smp_allocator,
 };
+
+const translation = @import("translation.zig");
 
 pub fn main() !void {
     rl.setExitKey(.null);
@@ -26,9 +27,12 @@ pub fn main() !void {
 
     rl.setTargetFPS(settings.target_fps);
 
+    try translation.init(gpa);
+    defer translation.deinit();
+
     try game_state.init();
     defer game_state.deinit();
-    
+
     // DEBUG switch out for real map later
     try game_state.map.loadMap(gpa, "test");
 
@@ -55,8 +59,13 @@ pub fn main() !void {
 
         state: switch (app_state.state) {
             .menu => {
-                try main_menu.update(delta);
-                main_menu.draw(); 
+                try menus.main.update(delta);
+                
+                rl.beginDrawing();
+                defer rl.endDrawing();
+                rl.clearBackground(.white);
+                
+                menus.main.draw();
             },
             .load_game => {
                 try game_state.loadGame(gpa);
@@ -71,13 +80,29 @@ pub fn main() !void {
             },
             .game => {
                 try game_state.update(delta);
+                
+                rl.beginDrawing();
+                defer rl.endDrawing();
+                rl.clearBackground(.black);
+                
                 try game_state.draw();
             },
             .pause => {
-
+                rl.beginDrawing();
+                defer rl.endDrawing();
+                rl.clearBackground(.black);
+                
+                try game_state.draw();
+                menus.pause.draw();
             },
             .settings => {
+                try menus.settings.update(delta);
 
+                rl.beginDrawing();
+                defer rl.endDrawing();
+                rl.clearBackground(.white);
+                
+                menus.settings.draw();
             },
             .exit => break :game_loop,
         }

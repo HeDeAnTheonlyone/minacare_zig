@@ -82,10 +82,6 @@ pub fn update(delta: f32) !void {
 
 /// The games root draw function
 pub fn draw() !void {
-    rl.beginDrawing();
-    defer rl.endDrawing();
-    rl.clearBackground(.black);
-
     rl.beginMode2D(player.cam);
     events.on_draw_world.dispatch({}) catch unreachable;
     rl.endMode2D();
@@ -145,16 +141,11 @@ fn save() void {
 /// Continue the game by loading the saved progress.
 pub fn loadGame(allocator: Allocator) !void {
     try load(allocator);
-    // Do a single update to avoid visual glitches if the game gets instant paused.
-    try update(0);
 }
 
 /// Delete progress and start game fresh.
 pub fn newGame() !void {
-    try persistance.delete();
-     // Do a single update to avoid visual glitches if the game gets instant paused.
-    try update(0);
-    
+    try persistance.delete();    
 }
 
 pub fn pause() !void {

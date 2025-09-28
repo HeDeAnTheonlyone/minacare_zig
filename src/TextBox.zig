@@ -6,6 +6,8 @@ const debug = @import("debug.zig");
 const settings = @import("settings.zig");
 const event = @import("event.zig");
 const drawer = @import("drawer.zig");
+const translation = @import("translation.zig");
+const Translatable = translation.Translatable;
 
 msg_queue: [max_msg]Message,
 displayed_chars: u32 = 0,
@@ -14,7 +16,7 @@ delay_counter: f32 = 0,
 display_delay: f32,
 msg_count: u8 = 0,
 msg_pointer: u8 = 0,
-current_msg_text: [1024]u8,
+current_msg_text: [4096]u8,
 events: struct {
     on_popup: event.Dispatcher(void,8),
     on_close: event.Dispatcher(void, 8),
@@ -23,7 +25,7 @@ events: struct {
 const Self = @This();
 pub const init = Self{
     .msg_queue = undefined,
-    .display_delay = 0.01,
+    .display_delay = 0.02,
     .current_msg_text = undefined,
     .events = .{
         .on_popup = .init,
@@ -33,7 +35,7 @@ pub const init = Self{
 const max_msg = 255;
 
 const Message = struct {
-    text: []const u8,
+    text: Translatable,
     // answers: [][]const u8,
 };
 
@@ -45,7 +47,7 @@ pub fn update(self: *Self, delta: f32) !void {
         try self.nextMessage();
     }
 
-    if (self.displayed_chars < self.msg_queue[self.msg_pointer].text.len) {
+    if (self.displayed_chars < self.msg_queue[self.msg_pointer].text.translate().len) {
         self.delay_counter += delta;
         if (self.delay_counter >= self.display_delay) {
             self.delay_counter = 0;
@@ -65,12 +67,11 @@ pub fn draw(self: *Self) !void {
     );
     rl.drawRectangleRounded(rect, 0.2, 5, .white);
 
-
     rg.setStyle(.default, .{ .default = .text_size }, 32);
     rg.setStyle(.label, .{ .control = .text_padding }, 40);
     rg.setStyle(.default, .{ .default = .text_alignment_vertical }, 0);
+    rg.setStyle(.default, .{ .control = .text_alignment }, 0);
     rg.setStyle(.default, .{ .default = .text_line_spacing }, 40);
-
     _ = rg.label(rect, self.getCurrentMessage()); 
 }
 
@@ -82,7 +83,7 @@ pub fn enqueuMessageList(self: *Self, msgs: []const Message) !void {
 
 pub fn enqueueMessage(self: *Self, msg: Message) !void {
     if (self.msg_count == max_msg) return error.OutOfMemory;
-    if (msg.text.len >= self.current_msg_text.len) return error.MessageTextTooLong;
+    if (msg.text.translate().len >= self.current_msg_text.len) return error.MessageTextTooLong;
 
     self.msg_queue[self.msg_count] = msg;
     self.msg_count += 1;
@@ -91,7 +92,7 @@ pub fn enqueueMessage(self: *Self, msg: Message) !void {
 
 fn getCurrentMessage(self: *Self) [:0]const u8 {
     const msg = self.msg_queue[self.msg_pointer];
-    std.mem.copyForwards(u8, &self.current_msg_text, msg.text);
+    std.mem.copyForwards(u8, &self.current_msg_text, msg.text.translate());
     self.current_msg_text[self.displayed_chars] = 0;
     return self.current_msg_text[0..self.displayed_chars:0];
 }

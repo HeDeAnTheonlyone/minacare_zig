@@ -8,12 +8,6 @@ pub fn build(b: *std.Build) !void {
         "Additionally creates an assembly file next to the executable."
     ) orelse false;
 
-    // const generate_docs = b.option(
-    //     bool,
-    //     "docs",
-    //     "Generates documentation"
-    // ) orelse false;
-
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 

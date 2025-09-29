@@ -1,8 +1,8 @@
-const Allocator = @import("std").mem.Allocator; 
 const game_state = @import("game_state.zig");
-const menus = @import("menus.zig");
+const menu = @import("menu.zig");
 
 pub var current: State = .menu;
+pub var last: State = .menu;
 
 const State = enum {
     menu,
@@ -16,6 +16,7 @@ const State = enum {
 
 pub fn switchTo(state: State) !void {
     if (state == current) return;
+    last = current;
     switch(state) {
         .menu => |s| {current = s;}, 
         .load_game => {
@@ -29,7 +30,7 @@ pub fn switchTo(state: State) !void {
         .game => |s| {current = s;},
         .pause => |s| {current = s;},
         .settings => |s| {
-            menus.settings.syncSettings();
+            menu.settings.syncToSettings();
             current = s;
         },
         .exit => |s| {current = s;},

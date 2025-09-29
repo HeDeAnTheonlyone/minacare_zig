@@ -9,9 +9,9 @@ var arena: std.heap.ArenaAllocator = undefined;
 pub var languages: Languages = undefined; 
 pub var dictionary: std.StringHashMapUnmanaged([:0]const u8) = undefined;
 
-pub fn init(allocator: Allocator) !void {
+pub fn init(allocator: Allocator, selected_language: u8) !void {
     arena = std.heap.ArenaAllocator.init(allocator);
-    try loadTranslationData(allocator);
+    try loadTranslationData(allocator, selected_language);
 }
 
 pub fn deinit(allocator: Allocator) void {
@@ -22,7 +22,7 @@ pub fn deinit(allocator: Allocator) void {
     allocator.free(languages);
 }
 
-fn loadTranslationData(scratch_allocator: Allocator) !void {
+fn loadTranslationData(scratch_allocator: Allocator, selected_language: u8) !void {
     var dir = try std.fs.cwd().openDir("assets/translation", .{});
     defer dir.close();
     var file = try dir.openFile("translation.csv", .{ .mode = .read_only });
@@ -30,7 +30,7 @@ fn loadTranslationData(scratch_allocator: Allocator) !void {
 
     try generateAvailableLanguagesList(scratch_allocator, file);
     try file.seekTo(0);
-    try generateTranslationMap(arena.allocator(), file);
+    try generateTranslationMap(arena.allocator(), file, selected_language);
 }
 
 fn generateAvailableLanguagesList(allocator: Allocator, file: std.fs.File) !void {
@@ -41,18 +41,18 @@ fn generateAvailableLanguagesList(allocator: Allocator, file: std.fs.File) !void
     
     _ = try reader.interface.streamDelimiter(&writer, '\n');
     const lang_count = std.mem.count(u8, writer.buffered(), &.{csvSeparator});
-    languages = try allocator.alloc([:0]const u8, lang_count);
+    languages = try allocator.alloc([]const u8, lang_count);
 
     var iter = std.mem.splitScalar(u8, writer.buffered(), csvSeparator);
     _ = iter.first();
 
     var index: u8 = 0;
     while(iter.next()) |lang| : (index += 1) {
-        languages[index] = try allocator.dupeZ(u8, lang);
+        languages[index] = try allocator.dupe(u8, lang);
     }
 }
 
-fn generateTranslationMap(allocator: Allocator, file: std.fs.File) !void {
+fn generateTranslationMap(allocator: Allocator, file: std.fs.File, selected_language: u8) !void {
     dictionary = .empty;
     try dictionary.ensureTotalCapacity(allocator, 1024);
 
@@ -75,7 +75,7 @@ fn generateTranslationMap(allocator: Allocator, file: std.fs.File) !void {
                 try registerTranslation(
                     allocator,
                     writer.buffered(),
-                    settings.selected_language
+                    selected_language
                 );
             }
 
@@ -99,8 +99,6 @@ fn registerTranslation(allocator: Allocator, csvLine: []const u8, language_index
         else break :blk v;
     };
 
-    std.debug.print("{s} - {s}\n", .{key, value});
-
     try dictionary.put(
         allocator,
         try allocator.dupe(u8, key),
@@ -108,26 +106,37 @@ fn registerTranslation(allocator: Allocator, csvLine: []const u8, language_index
     );
 }
 
-pub fn reloadTranslationData() !void {
-    arena.reset(.retain_capacity);
+pub fn reloadTranslationData(selected_language: u8) !void {
+    _ = arena.reset(.retain_capacity);
 
     var dir = try std.fs.cwd().openDir("assets/translation", .{});
     defer dir.close();
     var file = try dir.openFile("translation.csv", .{ .mode = .read_only });
     defer file.close();
 
-    generateTranslationMap(arena.allocator(), file);
+    try generateTranslationMap(arena.allocator(), file, selected_language);
 }
 
-pub const Languages = [][:0]const u8;
+pub const Languages = [][]const u8;
 
 pub const Translatable = struct {
     id: []const u8,
     text: ?[:0]const u8 = null,
+    language: u8,
+
+    pub fn init(id: []const u8) Translatable {
+        return .{
+            .id = id,
+            .language = settings.selected_language,
+        };
+    }
 
     /// Caches and returns the translated string.
     pub fn translate(self: *const Translatable) [:0]const u8 {
-        if (self.text == null) @constCast(self).text = dictionary.get(self.id).?;
+        if (
+            self.text == null or
+            self.language != settings.selected_language
+        ) @constCast(self).text = dictionary.get(self.id) orelse "ERROR";
         return self.text.?;
     }
 };

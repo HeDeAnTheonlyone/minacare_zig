@@ -85,7 +85,7 @@ pub fn load(comptime data: anytype, comptime save_file: save_files) void {
     ) catch return;
     defer file.close();
 
-    var buf = [_:0]u8{0} ** 4096;
+    var buf: [4096:0]u8 = @splat(0);
     var reader = file.reader(&.{});
     const char_count = reader.interface.readSliceShort(&buf) catch {
         reportErr(.access, file_name);

@@ -5,7 +5,7 @@ const app_state = @import("app_state.zig");
 const settings = @import("settings.zig");
 const persistance = @import("persistance.zig");
 const game_state = @import("game_state.zig");
-const menus = @import("menus.zig");
+const menu = @import("menu.zig");
 const translation = @import("translation.zig");
 
 pub fn main() !void {
@@ -24,7 +24,7 @@ pub fn main() !void {
 
     rl.setTargetFPS(settings.target_fps);
 
-    try translation.init(app_context.gpa);
+    try translation.init(app_context.gpa, settings.selected_language);
     defer translation.deinit(app_context.gpa);
 
     try game_state.init();
@@ -56,13 +56,13 @@ pub fn main() !void {
 
         switch (app_state.current) {
             .menu => {
-                try menus.main.update(delta);
+                try menu.main.update(delta);
                 
                 rl.beginDrawing();
                 defer rl.endDrawing();
                 rl.clearBackground(.white);
                 
-                menus.main.draw();
+                menu.main.draw();
             },
             .game => {
                 try game_state.update(delta);
@@ -79,16 +79,16 @@ pub fn main() !void {
                 rl.clearBackground(.black);
                 
                 try game_state.draw();
-                menus.pause.draw();
+                menu.pause.draw();
             },
             .settings => {
-                try menus.settings.update(delta);
+                try menu.settings.update(delta);
 
                 rl.beginDrawing();
                 defer rl.endDrawing();
                 rl.clearBackground(.white);
                 
-                menus.settings.draw();
+                menu.settings.draw();
             },
             .exit => break :game_loop,
             else => unreachable,

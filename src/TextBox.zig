@@ -25,6 +25,7 @@ events: struct {
 const Self = @This();
 pub const init = Self{
     .msg_queue = undefined,
+    // TODO make this use the settings value for that
     .display_delay = 0.02,
     .current_msg_text = undefined,
     .events = .{

@@ -1,6 +1,9 @@
-key;English;Deutsch
+key|English|Deutsch
 
-menu.load_game;Load Game;Spiel Laden
-menu.new_game;New Game;Neues Spiel
-menu.settings;Settings;Einstellungen
-menu.exit;Exit;Beenden
+menu.load_game|Load Game|Spiel Laden
+menu.new_game|New Game|Neues Spiel
+menu.settings|Settings|Einstellungen
+menu.exit|Exit|Beenden
+
+settings.resolution|640x360 (native);1280x720;1920x1080;2560x1440;3840x2160|640x360 (native);1280x720;1920x1080;2560x1440;3840x2160
+settings.fps|60;120;144;165;240;350;uncapped|60;120;144;165;240;350;unbegrenzt

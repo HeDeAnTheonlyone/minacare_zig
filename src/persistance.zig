@@ -56,7 +56,7 @@ pub fn save(comptime data: anytype, comptime save_file: save_files) void {
 pub fn load(comptime data: anytype, comptime save_file: save_files) void {
     const T, const ptr = switch (@typeInfo(@TypeOf(data))) {
         .pointer => |p| if (@typeInfo(p.child) == .@"struct")
-                .{p.child, @as(?*p.child,@ptrCast(data))}
+                .{p.child, @as(?*p.child, @ptrCast(data))}
             else
                 @compileError("Pointer has to point to a struct"),
         .type => .{data, null},

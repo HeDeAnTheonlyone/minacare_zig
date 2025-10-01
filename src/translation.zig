@@ -4,10 +4,10 @@ const std = @import("std");
 const settings = @import("settings.zig");
 const Allocator = std.mem.Allocator;
 
-const csvSeparator = ';';
+const csvSeparator = '|';
 var arena: std.heap.ArenaAllocator = undefined;
-pub var languages: Languages = undefined; 
-pub var dictionary: std.StringHashMapUnmanaged([:0]const u8) = undefined;
+pub var languages: [][]const u8 = undefined;
+var dictionary: std.StringHashMapUnmanaged([:0]const u8) = undefined;
 
 pub fn init(allocator: Allocator, selected_language: u8) !void {
     arena = std.heap.ArenaAllocator.init(allocator);
@@ -69,7 +69,14 @@ fn generateTranslationMap(allocator: Allocator, file: std.fs.File, selected_lang
                 else => return err,
             };
 
-        if (count != 1) {
+        if (
+            count > 1 and
+            !std.mem.startsWith(
+                u8,
+                std.mem.trimStart(u8, writer.buffered(), " "),
+                "#"
+            )
+        ) {
             if (first_loop) first_loop = false
             else {
                 try registerTranslation(
@@ -87,7 +94,6 @@ fn generateTranslationMap(allocator: Allocator, file: std.fs.File, selected_lang
 }
 
 fn registerTranslation(allocator: Allocator, csvLine: []const u8, language_index: u8) !void {
-    std.debug.assert(csvLine.len != 0);
     var iter = std.mem.splitScalar(u8, csvLine, csvSeparator);
 
     const key = iter.first();
@@ -117,26 +123,27 @@ pub fn reloadTranslationData(selected_language: u8) !void {
     try generateTranslationMap(arena.allocator(), file, selected_language);
 }
 
-pub const Languages = [][]const u8;
-
 pub const Translatable = struct {
     id: []const u8,
     text: ?[:0]const u8 = null,
     language: u8,
 
-    pub fn init(id: []const u8) Translatable {
+    pub fn init(comptime id: []const u8) Translatable {
         return .{
             .id = id,
-            .language = settings.selected_language,
+            .language = 0,
         };
     }
 
     /// Caches and returns the translated string.
-    pub fn translate(self: *const Translatable) [:0]const u8 {
+    pub fn translate(self: *Translatable) [:0]const u8 {
         if (
             self.text == null or
             self.language != settings.selected_language
-        ) @constCast(self).text = dictionary.get(self.id) orelse "ERROR";
+        ) {
+            self.text = dictionary.get(self.id) orelse "ERROR";
+            self.language = settings.selected_language;
+        }
         return self.text.?;
     }
 };

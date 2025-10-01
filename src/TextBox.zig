@@ -92,7 +92,7 @@ pub fn enqueueMessage(self: *Self, msg: Message) !void {
 }
 
 fn getCurrentMessage(self: *Self) [:0]const u8 {
-    const msg = self.msg_queue[self.msg_pointer];
+    var msg = self.msg_queue[self.msg_pointer];
     std.mem.copyForwards(u8, &self.current_msg_text, msg.text.translate());
     self.current_msg_text[self.displayed_chars] = 0;
     return self.current_msg_text[0..self.displayed_chars:0];

@@ -1,14 +1,20 @@
 const std = @import("std");
 const rl = @import("raylib");
-const app_context = @import("app_context.zig");
-const app_state = @import("app_state.zig");
-const settings = @import("settings.zig");
-const persistance = @import("persistance.zig");
-const game_state = @import("game_state.zig");
-const menu = @import("menu.zig");
-const translation = @import("translation.zig");
+const lib = @import("lib.zig");
+const app = lib.app;
+const game = lib.game;
+const util = lib.util;
+const app_context = app.context;
+const app_state = app.state;
+const settings = app.settings;
+const persistance = util.persistance;
+const translation = util.translation;
+const game_state = game.state;
+const menu = game.menu;
 
 pub fn main() !void {
+    persistance.load(settings, .settings);
+
     rl.setExitKey(.null);
     rl.setConfigFlags(.{ .window_resizable = true });
     rl.initWindow(

@@ -1,7 +1,7 @@
 //! Handles projecting and screen size adjusting for draw function calls
 
-const settings = @import("settings.zig");
 const rl = @import("raylib").raylib_module;
+const settings = @import("../lib.zig").app.settings;
 const Rectangle = rl.Rectangle;
 const Vector2 = rl.Vector2;
 const Color = rl.Color;

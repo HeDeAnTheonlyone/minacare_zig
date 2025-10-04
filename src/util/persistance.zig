@@ -1,5 +1,5 @@
 const std =  @import("std");
-const app_context = @import("app_context.zig");
+const app_context = @import("../lib.zig").app.context;
 
 /// Names for all save files.
 const save_files = enum {

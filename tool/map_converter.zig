@@ -1,7 +1,7 @@
 const std = @import("std");
 const rl = @import("raylib").raylib_module;
-const settings = @import("../src/Settings.zig");
-const StoredMap = @import("../src/TileMap.zig").StoredMap;
+const settings = @import("../src/app/settings.zig");
+const StoredMap = @import("../src/game/TileMap.zig").StoredMap;
 
 /// Intermediate types for the data cleanup and conversion
 const tiled_types = struct {

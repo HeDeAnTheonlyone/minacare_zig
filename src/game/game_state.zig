@@ -1,15 +1,15 @@
 //! `game_state` is only responsible to keep track of things during the game play and not the main menu.
 
-const std = @import("std");
 const rl = @import("raylib");
-const settings = @import("settings.zig");
-const persistance = @import("persistance.zig");
-const Allocator = @import("std").mem.Allocator;
-const event = @import("event.zig");
-const TileMap = @import("TileMap.zig");
-const Player = @import("Player.zig");
-const char_spawner = @import("character_spawner.zig");
-const TextBox = @import("TextBox.zig");
+const lib = @import("../lib.zig");
+const app = lib.app;
+const game = lib.game;
+const util = lib.util;
+const persistance = util.persistance;
+const Player = game.Player;
+const TileMap = game.TileMap;
+const event = util.event;
+const debug = if (@import("builtin").mode == .Debug) util.debug;
 
 const Self = @This();
 const character_spritehseet_path = "assets/textures/characters_spritesheet.png";
@@ -19,7 +19,7 @@ const tile_spritesheet_path = "assets/textures/tile_spritesheet.png";
 pub var counter: f32 = 0;
 pub var map: TileMap = undefined;
 pub var player: Player = undefined;
-pub var text_box: TextBox = undefined;
+pub var text_box: game.TextBox = undefined;
 pub var character_spritesheet: rl.Texture2D = undefined;
 pub var tile_spritesheet: rl.Texture2D = undefined;
 pub var events: struct {
@@ -45,7 +45,7 @@ pub fn init() !void {
     try events.on_draw_world.add(.init(&map, "draw", 100));
     
     player = try Player.init(
-        try char_spawner.Cerby.spawn(
+        try game.character_spawner.Cerby.spawn(
             .{ .coordinates = .{
                 .x = 0,
                 .y = 40
@@ -89,7 +89,6 @@ pub fn draw() !void {
     events.on_draw_ui.dispatch({}) catch unreachable;
 
     if (@import("builtin").mode == .Debug) {
-        const debug = @import("debug.zig");
         try debug.drawDebugPanel();
         // if (debug.show_fps) @import("drawer.zig").drawFps(.{
         //     .x = 200,
@@ -98,10 +97,14 @@ pub fn draw() !void {
     }
 
     // DEBUG
-    @import("drawer.zig").drawFps(.{
+    util.drawer.drawFps(.{
         .x = 200,
         .y = 10,
     });
+}
+
+fn debugDraw() void {
+    try debug.drawDebugPanel();
 }
 
 /// Gets and loads save data if available.
@@ -113,7 +116,7 @@ fn load() !void {
 
     if (@import("builtin").mode == .Debug) {
         persistance.load(
-            @import("debug.zig"),
+            debug,
             .debug,
         );
     }
@@ -125,7 +128,7 @@ fn load() !void {
 fn save() void {
     persistance.save(&player, .player);
     if (@import("builtin").mode == .Debug) {
-        persistance.save(@import("debug.zig"), .debug);
+        persistance.save(debug, .debug);
     }
 }
 

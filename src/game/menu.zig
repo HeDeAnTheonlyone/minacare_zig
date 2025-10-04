@@ -1,21 +1,23 @@
 const std = @import("std");
 const rl = @import("raylib");
 const rg = @import("raygui");
-const stg = @import("settings.zig");
-const app_state = @import("app_state.zig");
-const game_state = @import("game_state.zig");
-const persistance = @import("persistance.zig");
-const translation = @import("translation.zig");
+const lib = @import("../lib.zig");
+const app = lib.app;
+const game = lib.game;
+const util = lib.util;
+const stg = app.settings;
+const style = util.style;
+const translation = util.translation;
 const Rectangle = rl.Rectangle;
-const Vector2 = rl.Vector2;
 const Translatable = translation.Translatable;
+
+const button_height: f32 = 100;
 
 pub const main = struct {
     var load_game: bool = false;
     var new_game: bool = false;
     var settings_: bool = false;
     var exit: bool = false;
-    const button_height: f32 = 100;
     var buttons = [_]struct{Translatable, *bool}{
         .{Translatable.init("menu.load_game"), &load_game},
         .{Translatable.init("menu.new_game"), &new_game},
@@ -24,23 +26,18 @@ pub const main = struct {
     };
 
     pub fn update(_: f32) !void {
-        if (load_game) try app_state.switchTo(.load_game)
-            else if (new_game) try app_state.switchTo(.new_game)
-            else if (settings_) try app_state.switchTo(.settings)
-            else if (exit) try app_state.switchTo(.exit)
-            else try app_state.switchTo(.menu);
+        if (load_game) try app.state.switchTo(.load_game)
+            else if (new_game) try app.state.switchTo(.new_game)
+            else if (settings_) try app.state.switchTo(.settings)
+            else if (exit) try app.state.switchTo(.exit)
+            else try app.state.switchTo(.menu);
     } 
 
     pub fn draw() void {
-        rg.setStyle(.default, .{ .default = .text_size }, 100);
-        rg.setStyle(.default, .{ .default = .text_alignment_vertical }, 0);
-        rg.setStyle(.label, .{ .control = .text_alignment }, 1);
-        rg.setStyle(.label, .{ .control = .text_color_normal }, rl.colorToInt(.black));
-        _ = rg.label(Rectangle.init(0, 100, @floatFromInt(stg.render_width), 110), "Minacare");
+        style.apply(.main_menu_title);
+        _ = rg.label(Rectangle.init(0, 100, @floatFromInt(stg.render_width), 260), "Minacare");
 
-        rg.setStyle(.default, .{ .default = .text_size }, 64);
-        rg.setStyle(.default, .{ .default = .text_alignment_vertical }, 1);
-
+        style.apply(.main_menu_buttons);
         for (&buttons, 0..) |*button, i| {
             const button_area_y = @as(f32, @floatFromInt(stg.render_height)) * 0.4;
             const button_area_height = @as(f32, @floatFromInt(stg.render_height)) - button_area_y - 100; // -100 from the bottom
@@ -60,6 +57,7 @@ pub const main = struct {
 };
 
 pub const settings= struct {
+    const button_spacing = 50;
     var is_synced: bool = false;
 
     pub fn update(_: f32) !void {
@@ -76,19 +74,45 @@ pub const settings= struct {
             changed = true;
         }
 
+        if (resolution.changed()) {
+            rl.setWindowSize(resolution.getValue()[0], resolution.getValue()[1]);
+            stg.updateRenderSize();
+        }
+
         if (changed) save();
 
-        if (rl.isKeyPressed(.b)) try app_state.switchTo(.menu); // DEBUG
+        if (rl.isKeyPressed(.b)) try app.state.switchTo(.menu); // DEBUG
     }
 
     pub fn draw() void {
+        // Menu elements get drawn from bottom to top to correctly handle overlapping
+
+        const button_x = @as(f32, @floatFromInt(stg.render_width)) * 0.25;
+        const button_width = @as(f32, @floatFromInt(stg.render_width)) * 0.5; 
+        // const button
+
+        style.apply(.settings_menu_buttons);
         if (
             rg.dropdownBox(
                 Rectangle.init(
-                    @as(f32, @floatFromInt(stg.render_width)) * 0.25,
-                    300,
-                    @as(f32, @floatFromInt(stg.render_width)) * 0.5,
-                    100
+                    button_x,
+                    100 * 3 + button_height * 2,
+                    button_width,
+                    button_height
+                ),
+                resolution.text.translate(),
+                &resolution.selected,
+                resolution.edit_mode,
+            ) == 1
+        ) resolution.edit_mode = !resolution.edit_mode;
+
+        if (
+            rg.dropdownBox(
+                Rectangle.init(
+                    button_x,
+                    100 * 2 + button_height,
+                    button_width,
+                    button_height
                 ),
                 language.text,
                 &language.selected,
@@ -99,10 +123,10 @@ pub const settings= struct {
         if (
             rg.dropdownBox(
                 Rectangle.init(
-                    @as(f32, @floatFromInt(stg.render_width)) * 0.25,
+                    button_x,
                     100,
-                    @as(f32, @floatFromInt(stg.render_width)) * 0.5,
-                    100
+                    button_width,
+                    button_height
                 ),
                 fps.text.translate(),
                 &fps.selected,
@@ -119,7 +143,7 @@ pub const settings= struct {
     }
 
     fn save() void {
-        persistance.save(stg, .settings);
+        util.persistance.save(stg, .settings);
     }
 
     const resolution = struct {
@@ -146,8 +170,14 @@ pub const settings= struct {
             return selected != prev_selected;
         }
 
+        /// Gets the index of the given resolution or 2 if not in the list.
         fn getIndex(res: struct {i32, i32}) i32 {
-            std.mem.indexOfScalar(struct {i32, i32}, values, res);
+            std.mem.indexOfScalar(struct {i32, i32}, values, res) orelse 2;
+        }
+
+        /// Returns the current selected resolution value
+        fn getValue() struct {i32, i32} {
+            return values[@intCast(selected)];
         }
     };
 

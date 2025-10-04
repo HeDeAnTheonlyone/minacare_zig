@@ -1,7 +1,7 @@
 //! Holds all the texts of the game in the current selected language.
 
 const std = @import("std");
-const settings = @import("settings.zig");
+const settings = @import("../lib.zig").app.settings;
 const Allocator = std.mem.Allocator;
 
 const csvSeparator = '|';

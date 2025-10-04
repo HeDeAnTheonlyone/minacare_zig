@@ -13,15 +13,13 @@ pub fn build(b: *std.Build) !void {
 
     try map_converter.start();
 
-    const exe_mod = b.createModule(.{
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-
     const exe = b.addExecutable(.{
         .name = "minacare",
-        .root_module = exe_mod,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
 
     const raylib_deb = b.dependency("raylib", .{
@@ -33,7 +31,7 @@ pub fn build(b: *std.Build) !void {
     const raylib = raylib_deb.module("raylib");
     const raygui = raylib_deb.module("raygui");
 
-    exe.linkLibrary(raylib_artifact);
+    exe.root_module.linkLibrary(raylib_artifact);
     exe.root_module.addImport("raylib", raylib);
     exe.root_module.addImport("raygui", raygui);
 

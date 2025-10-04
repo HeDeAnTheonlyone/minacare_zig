@@ -24,7 +24,7 @@ pub var is_borderless: bool = false;
 /// Initializes all settings that can not be comptime evaluated
 pub fn init() !void {
     updateRenderSize();
-    font = try rl.loadFontEx("assets/fonts/vividly_extended.ttf", 128, null);
+    font = try rl.loadFontEx("assets/fonts/vividly_extended.ttf", 256, null);
     rg.setFont(font);
     rg.setStyle(.default, .{ .default = .text_wrap_mode }, 1);
     rg.setStyle(.label, .{ .control = .text_color_normal }, rl.colorToInt(.black));

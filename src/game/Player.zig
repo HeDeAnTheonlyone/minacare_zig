@@ -1,13 +1,15 @@
 const std = @import("std");
 const rl = @import("raylib");
-const settings = @import("settings.zig"); 
-const Character = @import("Character.zig");
-const char_spawner = @import("character_spawner.zig");
-const components = @import("components.zig");
-const game_state = @import("game_state.zig");
+const lib = @import("../lib.zig");
+const app = lib.app;
+const game = lib.game;
+const settings = app.settings; 
+const Character = game.Character;
+const char_spawner = game.character_spawner;
 const Vector2 = rl.Vector2;
 
 char: Character,
+// TODO maybe make Cam independent and just connect it to the player via events
 cam: rl.Camera2D,
 is_transformed: bool = true,
 
@@ -36,7 +38,7 @@ pub fn getSaveable(self: *Self) struct {*Vector2, *bool} {
 }
 
 pub fn update(self: *Self, delta: f32) !void {
-    if (game_state.paused) return; 
+    if (game.state.paused) return; 
     if (rl.isKeyReleased(.t)) try self.transform();
     try self.char.update(delta);
     updateCamPos(&self.cam, self.char.getCenter());

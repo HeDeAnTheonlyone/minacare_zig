@@ -1,8 +1,12 @@
 const std = @import("std");
-const settings = @import("settings.zig");
-const game_state = @import("game_state.zig");
-const drawer = @import("drawer.zig");
 const rl = @import("raylib").raylib_module;
+const lib = @import("../lib.zig");
+const app = lib.app;
+const game = lib.game;
+const util = lib.util;
+const settings = app.settings;
+const game_state = game.state;
+const drawer = util.drawer;
 const Vector2 = rl.Vector2;
 const Rectangle = rl.Rectangle;
 
@@ -74,7 +78,7 @@ pub fn draw(self: *Self) !void {
 }
 
 fn debugDraw(self: *Self) void {
-    const debug = @import("debug.zig");
+    const debug = util.debug;
     if(debug.show_tile_map_collisions) {
         var iter = self.map_data.collision_map.collision_shapes.iterator();
         while (iter.next()) |collision_shape| {

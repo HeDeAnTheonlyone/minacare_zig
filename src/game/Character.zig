@@ -1,23 +1,14 @@
 const std = @import("std");
 const rl = @import("raylib");
-const settings = @import("settings.zig");
-const game_state = @import("game_state.zig");
-const event = @import("event.zig");
-const drawer = @import("drawer.zig");
-const components = @import("components.zig");
-const TileMap = @import("TileMap.zig");
-const char_spawner = @import("character_spawner.zig");
-const Coordinates = TileMap.Coordinates;
-const AnimationPlayer = components.AnimationPlayer;
-const Movement = components.Movement;
-const Collider = components.Collider;
-const input = components.input;
+const lib = @import("../lib.zig");
+const game = lib.game;
+const util = lib.util;
 const Rectangle = rl.Rectangle;
 const Vector2 = rl.Vector2;
 
-animation: AnimationPlayer,
-movement: Movement,
-collider: Collider,
+animation: game.components.AnimationPlayer,
+movement: game.components.Movement,
+collider: game.components.Collider,
 name: []const u8,
 vtable: *const VTable,
 
@@ -30,7 +21,7 @@ pub const VTable = struct {
 
 pub fn update(self: *Self, delta: f32) !void {
     // TODO Maybe remove the pause check here and only put it in wrapper structs
-    if (game_state.paused) return;
+    if (game.state.paused) return;
     try self.moveAndCollide(delta);
     try self.updateRotation();
     self.animation.update(delta);
@@ -49,7 +40,8 @@ pub fn draw(self: *Self) !void {
 }
 
 pub fn debugDraw(self: *Self) void {
-    const debug = @import("debug.zig");
+    const debug = util.debug;
+    const drawer = util.drawer;
     if (debug.show_character_hitbox) {
         drawer.drawRectOutline(
             Rectangle.init(

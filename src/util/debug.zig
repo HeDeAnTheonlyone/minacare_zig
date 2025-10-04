@@ -1,7 +1,7 @@
 const std = @import("std");
 const rl = @import("raylib");
 const rg = @import("raygui");
-const settings = @import("settings.zig");
+const settings = @import("../lib.zig").app.settings;
 
 pub var show_debug_menu = false;
 

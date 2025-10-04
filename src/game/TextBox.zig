@@ -1,13 +1,13 @@
 const std = @import("std");
 const rl = @import("raylib");
 const rg = @import("raygui");
-const game_state = @import("game_state.zig");
-const debug = @import("debug.zig");
-const settings = @import("settings.zig");
-const event = @import("event.zig");
-const drawer = @import("drawer.zig");
-const translation = @import("translation.zig");
-const Translatable = translation.Translatable;
+const lib = @import("../lib.zig");
+const app = lib.app;
+const game = lib.game;
+const util = lib.util;
+const settings = app.settings;
+const event = util.event;
+const Translatable = util.translation.Translatable;
 
 msg_queue: [max_msg]Message,
 displayed_chars: u32 = 0,

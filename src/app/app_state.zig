@@ -1,6 +1,7 @@
 const game = @import("../lib.zig").game;
 const game_state = game.state;
 const menu = game.menu;
+const util = @import("../lib.zig").util;
 
 pub var current: State = .menu;
 pub var last: State = .menu;

@@ -5,7 +5,7 @@ const lib = @import("../lib.zig");
 const app = lib.app;
 const game = lib.game;
 const util = lib.util;
-const persistance = util.persistance;
+const persistence = util.persistence;
 const Player = game.Player;
 const TileMap = game.TileMap;
 const event = util.event;
@@ -31,6 +31,8 @@ pub var events: struct {
 } = undefined;
 pub var paused: bool = false;
 
+
+
 pub fn init() !void {
     character_spritesheet = try rl.loadTexture(character_spritehseet_path);
     tile_spritesheet = try rl.loadTexture(tile_spritesheet_path);
@@ -42,7 +44,7 @@ pub fn init() !void {
         .on_exit = .init,
     };
     map = TileMap.init(&tile_spritesheet);
-    try events.on_draw_world.add(.init(&map, "draw", 100));
+    try events.on_draw_world.add(.init(&map, "draw"), 100);
     
     player = try Player.init(
         try game.character_spawner.Cerby.spawn(
@@ -52,17 +54,24 @@ pub fn init() !void {
             }}
         )
     );
-    try events.on_load.add(.init(&player, "syncTransformation", 0));
-    try events.on_update.add(.init(&player, "update", 0));
-    try events.on_draw_world.add(.init(&player, "draw", 0));
+    try events.on_load.add(.init(&player, "syncTransformation"), 0);
+    try events.on_update.add(.init(&player, "update"), 0);
+    try events.on_draw_world.add(.init(&player, "draw"), 0);
 
-    try player.char.movement.events.on_pos_changed.add(.init(&map, "updateTileRenderCache", 0));
+    try player.char.movement.events.on_pos_changed.add(.init(&map, "updateTileRenderCache"), 0);
 
     text_box = .init;
-    try events.on_draw_ui.add(.init(&text_box, "draw", 0));
-    try events.on_update.add(.init(&text_box, "update", 0));
-    try text_box.events.on_popup.add(.init(Self, "pause", 0));
-    try text_box.events.on_close.add(.init(Self, "unpause", 0));
+    try events.on_draw_ui.add(.init(&text_box, "draw"), 0);
+    try events.on_update.add(.init(&text_box, "update"), 0);
+    try text_box.events.on_popup.add(.init(Self, "pause"), 0);
+    try text_box.events.on_close.add(.init(Self, "unpause"), 0);
+
+    try util.tween.create(
+        rl.Vector2,
+        &player.char.movement.pos,
+        player.char.movement.pos.add(.{.x = 100, .y = 0}),
+        1,
+    );
 }
 
 pub fn deinit() void {
@@ -78,6 +87,7 @@ pub fn deinit() void {
 pub fn update(delta: f32) !void {
     counter += delta;
     try events.on_update.dispatch(delta);
+    try util.tween.update(delta);
 }
 
 /// The games root draw function
@@ -109,13 +119,13 @@ fn debugDraw() void {
 
 /// Gets and loads save data if available.
 fn load() !void {
-    persistance.load(
+    persistence.load(
         &player,
         .player,
     );
 
     if (@import("builtin").mode == .Debug) {
-        persistance.load(
+        persistence.load(
             debug,
             .debug,
         );
@@ -126,9 +136,9 @@ fn load() !void {
 
 /// Saves the current game state
 fn save() void {
-    persistance.save(&player, .player);
+    persistence.save(&player, .player);
     if (@import("builtin").mode == .Debug) {
-        persistance.save(debug, .debug);
+        persistence.save(debug, .debug);
     }
 }
 
@@ -139,7 +149,7 @@ pub fn loadGame() !void {
 
 /// Delete progress and start game fresh.
 pub fn newGame() !void {
-    try persistance.delete();    
+    try persistence.delete();    
 }
 
 pub fn pause() !void {

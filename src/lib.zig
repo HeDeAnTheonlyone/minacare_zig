@@ -19,7 +19,8 @@ pub const util = struct {
     pub const debug = if (@import("builtin").mode == .Debug) @import("util/debug.zig");
     pub const drawer = @import("util/drawer.zig");
     pub const event = @import("util/event.zig");
-    pub const persistance = @import("util/persistance.zig");
+    pub const persistence = @import("util/persistence.zig");
     pub const style = @import("util/style.zig");
     pub const translation = @import("util/translation.zig");
+    pub const tween = @import("util/tween.zig");
 };

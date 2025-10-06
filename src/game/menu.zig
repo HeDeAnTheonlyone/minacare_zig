@@ -143,7 +143,7 @@ pub const settings= struct {
     }
 
     fn save() void {
-        util.persistance.save(stg, .settings);
+        util.persistence.save(stg, .settings);
     }
 
     const resolution = struct {

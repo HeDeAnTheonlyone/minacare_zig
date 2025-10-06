@@ -7,13 +7,14 @@ const util = lib.util;
 const app_context = app.context;
 const app_state = app.state;
 const settings = app.settings;
-const persistance = util.persistance;
+const persistence = util.persistence;
 const translation = util.translation;
+const tween = util.tween;
 const game_state = game.state;
 const menu = game.menu;
 
 pub fn main() !void {
-    persistance.load(settings, .settings);
+    persistence.load(settings, .settings);
 
     rl.setExitKey(.null);
     rl.setConfigFlags(.{ .window_resizable = true });
@@ -26,12 +27,15 @@ pub fn main() !void {
 
     try settings.init();
     defer settings.deinit();
-    persistance.load(settings, .settings);
+    persistence.load(settings, .settings);
 
     rl.setTargetFPS(settings.target_fps);
 
     try translation.init(app_context.gpa, settings.selected_language);
     defer translation.deinit(app_context.gpa);
+
+    tween.init(app_context.gpa);
+    defer tween.deinit();
 
     try game_state.init();
     defer game_state.deinit();

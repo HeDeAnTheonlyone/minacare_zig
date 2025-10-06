@@ -22,10 +22,13 @@ pub fn deinit() void {
 
 pub fn update(delta: f32) !void {
     for (0..tween_count) |i| {
-        try active_tweens[i].update(delta);
+        if (!try active_tweens[i].update(delta))
+            destroy(i, allocator);
     }
 }
 
+/// Creates a new tween and puts it in the tween list.
+/// The underlying tween gets allocated and automatially freed when finished.
 pub fn create(comptime T: type, source: *T, target: T, duration: f32) !void {
     if (tween_count == max_tweens) return error.OutOfMemory;
 
@@ -40,13 +43,20 @@ pub fn create(comptime T: type, source: *T, target: T, duration: f32) !void {
     tween_count += 1;
 }
 
+fn destroy(index: usize, _allocator: Allocator) void {
+    active_tweens[index].deinit(_allocator);
+    active_tweens[index] = active_tweens[tween_count - 1];
+    tween_count -= 1;
+}
+
 const TweenAdapter = struct {
     tween: *anyopaque,
-    updateFn: *const fn(*anyopaque, f32) anyerror!void,
+    updateFn: *const fn(*anyopaque, f32) anyerror!bool,
     deinitFn: *const fn(*anyopaque, Allocator) void,
 
-    fn update(self: *TweenAdapter, delta: f32) !void {
-        try self.updateFn(self.tween, delta);
+    /// Updates the underlying tween and returns its continuation state.
+    fn update(self: *TweenAdapter, delta: f32) !bool {
+        return try self.updateFn(self.tween, delta);
     }
 
     fn deinit(self: *TweenAdapter, _allocator: Allocator) void {
@@ -93,7 +103,8 @@ fn Tween(comptime T: type) type {
             };
         }
 
-        pub fn update(_self: *anyopaque, delta: f32) !void {
+        /// Updates the tween. Returns true if still running or false if finished.
+        pub fn update(_self: *anyopaque, delta: f32) !bool {
             const self: *Self = @alignCast(@ptrCast(_self));
             self.elapsed += delta;
 
@@ -115,7 +126,7 @@ fn Tween(comptime T: type) type {
                                 self.elapsed / self.duration
                             );
 
-                            self.source.*.x = std.math.lerp(
+                            self.source.*.y = std.math.lerp(
                                 self.source.y,
                                 self.target.y,
                                 self.elapsed / self.duration
@@ -154,7 +165,9 @@ fn Tween(comptime T: type) type {
 
             if (self.elapsed >= self.duration) {
                 self.source.* = self.target;
+                return false;
             }
+            return true;
         }
     };
 }

@@ -1,3 +1,5 @@
+//! Instantiate a character only through the `character_spawner`.
+
 const std = @import("std");
 const rl = @import("raylib");
 const lib = @import("../lib.zig");

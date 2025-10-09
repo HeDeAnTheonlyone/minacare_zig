@@ -5,6 +5,7 @@ const util = @import("../lib.zig").util;
 
 pub var current: State = .menu;
 pub var last: State = .menu;
+pub var counter: f32 = 0;
 
 const State = enum {
     menu,

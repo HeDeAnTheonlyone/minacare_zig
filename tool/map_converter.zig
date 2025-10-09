@@ -104,7 +104,7 @@ pub fn start() !void {
                     try std.mem.concat(
                         arena_allocator,
                         u8,
-                        &.{m.name[0..m.name.len - 4], "zon"}
+                        &.{m.name[0..m.name.len - 4], ".zon"}
                     ),
                     .{}
                 );

@@ -41,7 +41,7 @@ pub fn main() !void {
     defer game_state.deinit();
 
     // DEBUG switch out for real map later
-    try game_state.map.loadMap(app_context.gpa, "test");
+    try game_state.map.loadMap(app_context.gpa, "minaland");
 
     game_loop: while(!rl.windowShouldClose())
     {
@@ -63,6 +63,9 @@ pub fn main() !void {
             0,
             settings.frame_time_cap
         );
+
+        app_state.counter += delta;
+        try util.tween.update();
 
         switch (app_state.current) {
             .menu => {

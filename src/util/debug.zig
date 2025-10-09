@@ -10,19 +10,23 @@ pub var show_character_hitbox = false;
 pub var show_character_origin = false;
 pub var show_character_center = false;
 pub var show_tile_map_collisions = false;
+pub var show_current_chunk_bounds = false;
+pub var show_error_tiles = false;
 
 comptime {
     if (@import("builtin").mode != .Debug)
         @compileError("The debug module is not allowed in release builds.");
 }
 
-pub fn getSaveable() struct {*bool, *bool, *bool, *bool, *bool} {
+pub fn getSaveable() struct {*bool, *bool, *bool, *bool, *bool, *bool, *bool} {
     return .{
         &show_fps,
         &show_character_hitbox,
         &show_character_origin,
         &show_character_center,
         &show_tile_map_collisions,
+        &show_current_chunk_bounds,
+        &show_error_tiles,
     };
 }
 
@@ -56,11 +60,13 @@ pub fn drawDebugPanel() !void {
         .{"Player Origin", &show_character_origin},
         .{"Player Centerpoint", &show_character_center},
         .{"Tilemap Collisions", &show_tile_map_collisions},
+        .{"Chunk Bound", &show_current_chunk_bounds},
+        .{"Error Tiles", &show_error_tiles},
     };
 
     for (check_boxes, 0..) |box, i| {
         const y_pos: f32 =  @floatFromInt(40 + 30 * i);
-        _ =rg.checkBox(
+        _ = rg.checkBox(
             .{
                 .x = 10,
                 .y = y_pos,

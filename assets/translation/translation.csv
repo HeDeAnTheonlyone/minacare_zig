@@ -7,3 +7,5 @@ menu.exit|Exit|Beenden
 
 settings.resolution|640x360 (native);1280x720;1920x1080;2560x1440;3840x2160|640x360 (native);1280x720;1920x1080;2560x1440;3840x2160
 settings.fps|60;120;144;165;240;350;uncapped|60;120;144;165;240;350;unbegrenzt
+
+test.txt|This is a test text to display in the textbox|aaaa

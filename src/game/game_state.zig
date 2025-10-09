@@ -15,7 +15,7 @@ const Self = @This();
 const character_spritehseet_path = "assets/textures/characters_spritesheet.png";
 const tile_spritesheet_path = "assets/textures/tile_spritesheet.png";
 
-/// A global counter for all kinds of stuff that needs it.
+/// An in_game counter for all kinds of stuff that needs it.
 pub var counter: f32 = 0;
 pub var map: TileMap = undefined;
 pub var player: Player = undefined;
@@ -43,6 +43,7 @@ pub fn init() !void {
         .on_draw_ui = .init,
         .on_exit = .init,
     };
+
     map = TileMap.init(&tile_spritesheet);
     try events.on_draw_world.add(.init(&map, "draw"), 100);
     
@@ -50,7 +51,7 @@ pub fn init() !void {
         try game.character_spawner.Cerby.spawn(
             .{ .coordinates = .{
                 .x = 0,
-                .y = 40
+                .y = 0
             }}
         )
     );
@@ -65,13 +66,14 @@ pub fn init() !void {
     try events.on_update.add(.init(&text_box, "update"), 0);
     try text_box.events.on_popup.add(.init(Self, "pause"), 0);
     try text_box.events.on_close.add(.init(Self, "unpause"), 0);
-
-    try util.tween.create(
-        rl.Vector2,
-        &player.char.movement.pos,
-        player.char.movement.pos.add(.{.x = 100, .y = 0}),
-        1,
-    );
+    
+    // try util.tween.create(
+    //     rl.Vector2,
+    //     &player.char.movement.pos,
+    //     player.char.movement.pos.add(.{.x = 200, .y = 0}),
+    //     10,
+    //     &counter
+    // );
 }
 
 pub fn deinit() void {
@@ -87,7 +89,6 @@ pub fn deinit() void {
 pub fn update(delta: f32) !void {
     counter += delta;
     try events.on_update.dispatch(delta);
-    try util.tween.update(delta);
 }
 
 /// The games root draw function

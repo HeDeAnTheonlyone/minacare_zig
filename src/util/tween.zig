@@ -20,23 +20,25 @@ pub fn deinit() void {
     }
 }
 
-pub fn update(delta: f32) !void {
+pub fn update() !void {
     for (0..tween_count) |i| {
-        if (!try active_tweens[i].update(delta))
+        if (!try active_tweens[i].update())
             destroy(i, allocator);
     }
 }
 
 /// Creates a new tween and puts it in the tween list.
 /// The underlying tween gets allocated and automatially freed when finished.
-pub fn create(comptime T: type, source: *T, target: T, duration: f32) !void {
+/// `counter_ref` is the counter that gets used to measure the passing of time.
+pub fn create(comptime T: type, source: *T, target: T, duration: f32, counter_ref: *f32) !void {
     if (tween_count == max_tweens) return error.OutOfMemory;
 
     var tween = try allocator.create(Tween(T));
     tween.* = Tween(T).init(
         source,
         target,
-        duration
+        counter_ref.* + duration,
+        counter_ref,
     );
 
     active_tweens[tween_count] = tween.getTweenAdapter();
@@ -51,12 +53,12 @@ fn destroy(index: usize, _allocator: Allocator) void {
 
 const TweenAdapter = struct {
     tween: *anyopaque,
-    updateFn: *const fn(*anyopaque, f32) anyerror!bool,
+    updateFn: *const fn(*anyopaque) anyerror!bool,
     deinitFn: *const fn(*anyopaque, Allocator) void,
 
     /// Updates the underlying tween and returns its continuation state.
-    fn update(self: *TweenAdapter, delta: f32) !bool {
-        return try self.updateFn(self.tween, delta);
+    fn update(self: *TweenAdapter) !bool {
+        return try self.updateFn(self.tween);
     }
 
     fn deinit(self: *TweenAdapter, _allocator: Allocator) void {
@@ -77,16 +79,17 @@ fn Tween(comptime T: type) type {
     return struct {
         source: *T,
         target: T,
-        duration: f32,
-        elapsed: f32 = 0,
+        end_timestamp: f32,
+        counter_ref: *f32,
 
         const Self = @This();
 
-        fn init(source: *T, target: T, duration: f32) Self {
+        fn init(source: *T, target: T, end_timestamp: f32, counter_ref: *f32) Self {
             return .{
                 .source = source,
                 .target = target,
-                .duration = duration
+                .end_timestamp = end_timestamp,
+                .counter_ref = counter_ref,
             };
         }
 
@@ -104,9 +107,8 @@ fn Tween(comptime T: type) type {
         }
 
         /// Updates the tween. Returns true if still running or false if finished.
-        pub fn update(_self: *anyopaque, delta: f32) !bool {
+        pub fn update(_self: *anyopaque) !bool {
             const self: *Self = @alignCast(@ptrCast(_self));
-            self.elapsed += delta;
 
             switch (@typeInfo(T)) {
                 .int,
@@ -114,7 +116,7 @@ fn Tween(comptime T: type) type {
                     self.source.* = std.math.lerp(
                         self.source.*,
                         self.target,
-                        self.elapsed / self.duration
+                        self.end_timestamp / self.counter_ref.*
                     );
                 },
                 .@"struct" => {
@@ -123,38 +125,38 @@ fn Tween(comptime T: type) type {
                             self.source.*.x = std.math.lerp(
                                 self.source.x,
                                 self.target.x,
-                                self.elapsed / self.duration
+                                self.end_timestamp / self.counter_ref.*
                             );
 
                             self.source.*.y = std.math.lerp(
                                 self.source.y,
                                 self.target.y,
-                                self.elapsed / self.duration
+                                self.end_timestamp / self.counter_ref.*
                             );
                         },
                         Rectangle => {
                             self.source.*.x = std.math.lerp(
                                 self.source.x,
                                 self.target.x,
-                                self.elapsed / self.duration
+                                self.end_timestamp / self.counter_ref.*
                             );
 
                             self.source.*.y = std.math.lerp(
                                 self.source.y,
                                 self.target.y,
-                                self.elapsed / self.duration
+                                self.end_timestamp / self.counter_ref.*
                             );
 
                             self.source.*.width = std.math.lerp(
                                 self.source.width,
                                 self.target.width,
-                                self.elapsed / self.duration
+                                self.end_timestamp / self.counter_ref.*
                             );
 
                             self.source.*.height = std.math.lerp(
                                 self.source.height,
                                 self.target.height,
-                                self.elapsed / self.duration
+                                self.end_timestamp / self.counter_ref.*
                             );
                         },
                         else => unreachable,
@@ -163,7 +165,7 @@ fn Tween(comptime T: type) type {
                 else => unreachable,
             }
 
-            if (self.elapsed >= self.duration) {
+            if (self.end_timestamp >= self.counter_ref.*) {
                 self.source.* = self.target;
                 return false;
             }

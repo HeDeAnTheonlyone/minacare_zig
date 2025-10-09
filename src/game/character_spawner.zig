@@ -68,10 +68,10 @@ pub const Cerber = struct {
         };
 
         try char.animation.addAnimationList(&.{
-            .{ .name = "idle", .start_frame = 128, .end_frame = 128 },
-            .{ .name = "walk_up", .start_frame = 256, .end_frame = 256 },
-            .{ .name = "walk_down", .start_frame = 128, .end_frame = 128 },
-            .{ .name = "walk_side", .start_frame = 384, .end_frame = 384 },
+            .{ .name = "idle", .start_frame = 512, .end_frame = 512 },
+            .{ .name = "walk_up", .start_frame = 1024, .end_frame = 1024 },
+            .{ .name = "walk_down", .start_frame = 512, .end_frame = 512 },
+            .{ .name = "walk_side", .start_frame = 1536, .end_frame = 1536 },
         });
 
         return char;

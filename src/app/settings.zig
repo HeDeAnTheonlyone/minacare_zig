@@ -17,7 +17,7 @@ pub const frame_time_cap: f32 = 0.05;
 pub var text_speed: f32 = 0.02;
 pub var selected_language: u8 = 0;
 pub const tile_size: u8 = 16; // counts for x and y
-pub const chunk_size: u8 = 32; // counts for x and y
+pub const chunk_size: u8 = 16; // counts for x and y
 pub var is_borderless: bool = false;
 
 

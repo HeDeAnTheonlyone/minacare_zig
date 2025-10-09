@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.10" tiledversion="1.11.2" name="minacare_tiles" tilewidth="16" tileheight="16" tilecount="4096" columns="64">
- <image source="../textures/tile_spritesheet.png" width="1024" height="1024"/>
+<tileset version="1.10" tiledversion="1.11.2" name="tiles" tilewidth="16" tileheight="16" tilecount="65536" columns="256">
+ <image source="../textures/tile_spritesheet.png" width="4096" height="4096"/>
  <tile id="17">
   <properties>
    <property name="frame_time" type="int" value="5"/>
@@ -67,138 +67,6 @@
    <property name="frames" type="int" value="4"/>
   </properties>
  </tile>
- <tile id="81">
-  <properties>
-   <property name="frame_time" type="int" value="5"/>
-   <property name="frames" type="int" value="4"/>
-  </properties>
- </tile>
- <tile id="85">
-  <properties>
-   <property name="frame_time" type="int" value="5"/>
-   <property name="frames" type="int" value="4"/>
-  </properties>
- </tile>
- <tile id="89">
-  <properties>
-   <property name="frame_time" type="int" value="5"/>
-   <property name="frames" type="int" value="4"/>
-  </properties>
- </tile>
- <tile id="93">
-  <properties>
-   <property name="frame_time" type="int" value="5"/>
-   <property name="frames" type="int" value="4"/>
-  </properties>
- </tile>
- <tile id="97">
-  <properties>
-   <property name="frame_time" type="int" value="5"/>
-   <property name="frames" type="int" value="4"/>
-  </properties>
- </tile>
- <tile id="101">
-  <properties>
-   <property name="frame_time" type="int" value="5"/>
-   <property name="frames" type="int" value="4"/>
-  </properties>
- </tile>
- <tile id="105">
-  <properties>
-   <property name="frame_time" type="int" value="5"/>
-   <property name="frames" type="int" value="4"/>
-  </properties>
- </tile>
- <tile id="109">
-  <properties>
-   <property name="frame_time" type="int" value="5"/>
-   <property name="frames" type="int" value="4"/>
-  </properties>
- </tile>
- <tile id="113">
-  <properties>
-   <property name="frame_time" type="int" value="5"/>
-   <property name="frames" type="int" value="4"/>
-  </properties>
- </tile>
- <tile id="117">
-  <properties>
-   <property name="frame_time" type="int" value="5"/>
-   <property name="frames" type="int" value="4"/>
-  </properties>
- </tile>
- <tile id="121">
-  <properties>
-   <property name="frame_time" type="int" value="5"/>
-   <property name="frames" type="int" value="4"/>
-  </properties>
- </tile>
- <tile id="145">
-  <properties>
-   <property name="frame_time" type="int" value="5"/>
-   <property name="frames" type="int" value="4"/>
-  </properties>
- </tile>
- <tile id="149">
-  <properties>
-   <property name="frame_time" type="int" value="5"/>
-   <property name="frames" type="int" value="4"/>
-  </properties>
- </tile>
- <tile id="153">
-  <properties>
-   <property name="frame_time" type="int" value="5"/>
-   <property name="frames" type="int" value="4"/>
-  </properties>
- </tile>
- <tile id="157">
-  <properties>
-   <property name="frame_time" type="int" value="5"/>
-   <property name="frames" type="int" value="4"/>
-  </properties>
- </tile>
- <tile id="161">
-  <properties>
-   <property name="frame_time" type="int" value="5"/>
-   <property name="frames" type="int" value="4"/>
-  </properties>
- </tile>
- <tile id="165">
-  <properties>
-   <property name="frame_time" type="int" value="5"/>
-   <property name="frames" type="int" value="4"/>
-  </properties>
- </tile>
- <tile id="169">
-  <properties>
-   <property name="frame_time" type="int" value="5"/>
-   <property name="frames" type="int" value="4"/>
-  </properties>
- </tile>
- <tile id="173">
-  <properties>
-   <property name="frame_time" type="int" value="5"/>
-   <property name="frames" type="int" value="4"/>
-  </properties>
- </tile>
- <tile id="177">
-  <properties>
-   <property name="frame_time" type="int" value="5"/>
-   <property name="frames" type="int" value="4"/>
-  </properties>
- </tile>
- <tile id="209">
-  <properties>
-   <property name="frame_time" type="int" value="5"/>
-   <property name="frames" type="int" value="4"/>
-  </properties>
- </tile>
- <tile id="213">
-  <properties>
-   <property name="frame_time" type="int" value="5"/>
-   <property name="frames" type="int" value="4"/>
-  </properties>
- </tile>
  <tile id="273">
   <properties>
    <property name="frame_time" type="int" value="5"/>
@@ -206,6 +74,144 @@
   </properties>
  </tile>
  <tile id="277">
+  <properties>
+   <property name="frame_time" type="int" value="5"/>
+   <property name="frames" type="int" value="4"/>
+  </properties>
+ </tile>
+ <tile id="281">
+  <properties>
+   <property name="frame_time" type="int" value="5"/>
+   <property name="frames" type="int" value="4"/>
+  </properties>
+ </tile>
+ <tile id="285">
+  <properties>
+   <property name="frame_time" type="int" value="5"/>
+   <property name="frames" type="int" value="4"/>
+  </properties>
+ </tile>
+ <tile id="289">
+  <properties>
+   <property name="frame_time" type="int" value="5"/>
+   <property name="frames" type="int" value="4"/>
+  </properties>
+ </tile>
+ <tile id="293">
+  <properties>
+   <property name="frame_time" type="int" value="5"/>
+   <property name="frames" type="int" value="4"/>
+  </properties>
+ </tile>
+ <tile id="297">
+  <properties>
+   <property name="frame_time" type="int" value="5"/>
+   <property name="frames" type="int" value="4"/>
+  </properties>
+ </tile>
+ <tile id="301">
+  <properties>
+   <property name="frame_time" type="int" value="5"/>
+   <property name="frames" type="int" value="4"/>
+  </properties>
+ </tile>
+ <tile id="305">
+  <properties>
+   <property name="frame_time" type="int" value="5"/>
+   <property name="frames" type="int" value="4"/>
+  </properties>
+ </tile>
+ <tile id="309">
+  <properties>
+   <property name="frame_time" type="int" value="5"/>
+   <property name="frames" type="int" value="4"/>
+  </properties>
+ </tile>
+ <tile id="313">
+  <properties>
+   <property name="frame_time" type="int" value="5"/>
+   <property name="frames" type="int" value="4"/>
+  </properties>
+ </tile>
+ <tile id="529">
+  <properties>
+   <property name="frame_time" type="int" value="5"/>
+   <property name="frames" type="int" value="4"/>
+  </properties>
+ </tile>
+ <tile id="533">
+  <properties>
+   <property name="frame_time" type="int" value="5"/>
+   <property name="frames" type="int" value="4"/>
+  </properties>
+ </tile>
+ <tile id="537">
+  <properties>
+   <property name="frame_time" type="int" value="5"/>
+   <property name="frames" type="int" value="4"/>
+  </properties>
+ </tile>
+ <tile id="541">
+  <properties>
+   <property name="frame_time" type="int" value="5"/>
+   <property name="frames" type="int" value="4"/>
+  </properties>
+ </tile>
+ <tile id="545">
+  <properties>
+   <property name="frame_time" type="int" value="5"/>
+   <property name="frames" type="int" value="4"/>
+  </properties>
+ </tile>
+ <tile id="549">
+  <properties>
+   <property name="frame_time" type="int" value="5"/>
+   <property name="frames" type="int" value="4"/>
+  </properties>
+ </tile>
+ <tile id="553">
+  <properties>
+   <property name="frame_time" type="int" value="5"/>
+   <property name="frames" type="int" value="4"/>
+  </properties>
+ </tile>
+ <tile id="557">
+  <properties>
+   <property name="frame_time" type="int" value="5"/>
+   <property name="frames" type="int" value="4"/>
+  </properties>
+ </tile>
+ <tile id="561">
+  <properties>
+   <property name="frame_time" type="int" value="5"/>
+   <property name="frames" type="int" value="4"/>
+  </properties>
+ </tile>
+ <tile id="785">
+  <properties>
+   <property name="frame_time" type="int" value="5"/>
+   <property name="frames" type="int" value="4"/>
+  </properties>
+ </tile>
+ <tile id="789">
+  <properties>
+   <property name="frame_time" type="int" value="5"/>
+   <property name="frames" type="int" value="4"/>
+  </properties>
+ </tile>
+ <tile id="793">
+  <properties>
+   <property name="frame_time" type="int" value="5"/>
+   <property name="frames" type="int" value="4"/>
+  </properties>
+ </tile>
+ <tile id="1041">
+  <properties>
+   <property name="frame_time" type="int" value="5"/>
+   <property name="frames" type="int" value="4"/>
+  </properties>
+ </tile>
+ <tile id="1045">
   <properties>
    <property name="frame_time" type="int" value="5"/>
    <property name="frames" type="int" value="4"/>

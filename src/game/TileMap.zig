@@ -13,13 +13,13 @@ const Rectangle = rl.Rectangle;
 texture: *rl.Texture2D,
 map_data: RuntimeMap = undefined,
 tile_render_cache: [render_cache_size]?TileDrawData = @splat(null),
-current_chunk: ChunkCoordinates = Coordinates{.x = 0, .y = 0},
+current_chunk: ChunkCoordinates = Coordinates{.x = std.math.maxInt(i32), .y = std.math.maxInt(i32)},
 sub_frame_counter: f32 = 0,
 arena: ?std.heap.ArenaAllocator = null,
 
 const Self = @This();
 /// 2 layers * 9 chunks * 32 tiles horizontal * 32 tiles vertical
-const render_cache_size = 2 * 9 * @as(u32, @intCast(settings.chunk_size)) * @as(u32, @intCast(settings.chunk_size));
+const render_cache_size = 4 * 9 * @as(u32, @intCast(settings.chunk_size)) * @as(u32, @intCast(settings.chunk_size));
 
 /// `backing_allocator` will be put into an arena for single call free of all the managed memory with `deinit()`.
 /// 
@@ -39,6 +39,7 @@ pub fn drawCallback(self_: *anyopaque, _: void) void {
     self.draw();
 } 
 
+//TODO maybe multithread if it becomes an issue.
 pub fn draw(self: *Self) !void {
     for (self.tile_render_cache) |opt_draw_data| {
         const draw_data = opt_draw_data orelse continue;
@@ -49,9 +50,6 @@ pub fn draw(self: *Self) !void {
             draw_data.properties.?.frame_time != null
         ) {
             const prop = draw_data.properties.?;
-            // TODO
-            // consider making a new lookup table for only the properties of active tiles
-            // to compute the animation frames only once per tile type
             const sub_frame = @as(u32, @intFromFloat(@divFloor(
                 game_state.counter * settings.base_framerate,
                 @as(f32, @floatFromInt(prop.frame_time.?))
@@ -79,7 +77,7 @@ pub fn draw(self: *Self) !void {
 
 fn debugDraw(self: *Self) void {
     const debug = util.debug;
-    if(debug.show_tile_map_collisions) {
+    if (debug.show_tile_map_collisions) {
         var iter = self.map_data.collision_map.collision_shapes.iterator();
         while (iter.next()) |collision_shape| {
             drawer.drawRectOutline(
@@ -88,6 +86,11 @@ fn debugDraw(self: *Self) void {
                 rl.Color.blue
             );
         }
+    }
+    
+    if (debug.show_current_chunk_bounds) {
+        const rect = getChunkRect(self.current_chunk);
+        drawer.drawRectOutline(rect, 10, .purple);
     }
 }
 
@@ -107,7 +110,6 @@ pub fn updateTileRenderCache(self: *Self, player_pos: Vector2) !void {
     if (self.current_chunk.equals(getChunkCoordFromPos(player_pos))) return;
     self.current_chunk = getChunkCoordFromPos(player_pos);
 
-    const player_chunk = getChunkCoordFromPos(player_pos);
     const chunk_offsets: [9]ChunkCoordinates = .{
         .{.x = -1, .y = -1},
         .{.x = 0, .y = -1},
@@ -124,10 +126,11 @@ pub fn updateTileRenderCache(self: *Self, player_pos: Vector2) !void {
 
     for (self.map_data.tile_map.layers) |layer| {
         for (chunk_offsets) |offset| {
-            const current_chunk_coords = player_chunk.add(offset);
+            const current_chunk_coords = self.current_chunk.add(offset);
             const chunk = layer.chunks.get(current_chunk_coords)
-                orelse if (@import("builtin").mode == .Debug) RuntimeMap.TileMap.TileLayer.TileChunk.getErrorChunk(current_chunk_coords)
-                    else continue;
+                orelse if (@import("builtin").mode == .Debug and lib.util.debug.show_error_tiles)
+                    RuntimeMap.TileMap.TileLayer.TileChunk.getErrorChunk(current_chunk_coords)
+                else continue;
 
             for (0..chunk.tile_ids.len) |i| {
                 const tile_source_rect =
@@ -172,6 +175,23 @@ pub fn getChunkCoordFromPos(native_pos: Vector2) ChunkCoordinates {
     return Coordinates
         .fromPosition(native_pos)
         .divideScalar(settings.chunk_size);
+}
+
+/// Returns a rectangle with the bounds of a chunk from the given coordinates. 
+pub fn getChunkRect(coords: ChunkCoordinates) Rectangle {
+    const start = coords
+        .multiplyScalar(settings.chunk_size)
+        .multiplyScalar(settings.tile_size)
+        .toVector2();
+
+    const size = @as(u32, @intCast(settings.chunk_size)) * @as(u32, @intCast(settings.tile_size));
+
+    return Rectangle{
+        .x = start.x,
+        .y = start.y,
+        .width = @floatFromInt(size),
+        .height = @floatFromInt(size),
+    };
 }
 
 pub const Coordinates = CoordinatesDef();
@@ -282,10 +302,17 @@ pub fn CoordinatesDef() type {
             };
         }
 
-        pub fn modScalar(self: *SelfCoords, divisor: i32) SelfCoords {
+        pub fn modScalar(self: SelfCoords, divisor: i32) SelfCoords {
             return .{
                 .x = @rem(self.x, divisor),
                 .y = @rem(self.y, divisor),
+            };
+        }
+
+        pub fn toVector2(self: SelfCoords) Vector2 {
+            return .{
+                .x = @floatFromInt(self.x),
+                .y = @floatFromInt(self.y),
             };
         }
     };
@@ -347,7 +374,7 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
                         return .{
                             .x = coords.x * settings.chunk_size,
                             .y = coords.y * settings.chunk_size,
-                            .tile_ids = &[_]i32{63} ** (@as(u32, @intCast(settings.chunk_size)) * @as(u32, @intCast(settings.chunk_size))),
+                            .tile_ids = &[_]i32{0} ** (@as(u32, @intCast(settings.chunk_size)) * @as(u32, @intCast(settings.chunk_size))),
                         };
                     }   
                 };

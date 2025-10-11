@@ -41,7 +41,7 @@ pub fn main() !void {
     defer game_state.deinit();
 
     // DEBUG switch out for real map later
-    try game_state.map.loadMap(app_context.gpa, "minaland");
+    try game_state.map.loadMap(app_context.gpa, "test");
 
     game_loop: while(!rl.windowShouldClose())
     {

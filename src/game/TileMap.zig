@@ -12,14 +12,14 @@ const Rectangle = rl.Rectangle;
 
 texture: *rl.Texture2D,
 map_data: RuntimeMap = undefined,
+collision_map: CollisionMap = .init,
 tile_render_cache: [render_cache_size]?TileDrawData = @splat(null),
-current_chunk: ChunkCoordinates = Coordinates{.x = std.math.maxInt(i32), .y = std.math.maxInt(i32)},
-sub_frame_counter: f32 = 0,
+current_chunk: ChunkCoordinates = Coordinates.splat(std.math.maxInt(i32)),
 arena: ?std.heap.ArenaAllocator = null,
 
 const Self = @This();
 /// 2 layers * 9 chunks * 32 tiles horizontal * 32 tiles vertical
-const render_cache_size = 4 * 9 * @as(u32, @intCast(settings.chunk_size)) * @as(u32, @intCast(settings.chunk_size));
+const render_cache_size = 2 * 9 * @as(u32, @intCast(settings.chunk_size)) * @as(u32, @intCast(settings.chunk_size));
 
 /// `backing_allocator` will be put into an arena for single call free of all the managed memory with `deinit()`.
 /// 
@@ -39,7 +39,6 @@ pub fn drawCallback(self_: *anyopaque, _: void) void {
     self.draw();
 } 
 
-//TODO maybe multithread if it becomes an issue.
 pub fn draw(self: *Self) !void {
     for (self.tile_render_cache) |opt_draw_data| {
         const draw_data = opt_draw_data orelse continue;
@@ -78,10 +77,19 @@ pub fn draw(self: *Self) !void {
 fn debugDraw(self: *Self) void {
     const debug = util.debug;
     if (debug.show_tile_map_collisions) {
-        var iter = self.map_data.collision_map.collision_shapes.iterator();
+        var iter = self.collision_map.collisions.iterator();
         while (iter.next()) |collision_shape| {
+            const pos = collision_shape.key_ptr
+                .multiplyScalar(settings.tile_size)
+                .toVector2();
+            const rect = Rectangle{
+                .x = collision_shape.value_ptr.*.x + pos.x,
+                .y = collision_shape.value_ptr.*.y + pos.y,
+                .width = collision_shape.value_ptr.*.width,
+                .height = collision_shape.value_ptr.*.height,
+            };
             drawer.drawRectOutline(
-                collision_shape.value_ptr.*,
+                rect,
                 5,
                 rl.Color.blue
             );
@@ -97,19 +105,27 @@ fn debugDraw(self: *Self) void {
 /// Deinits old map and load new map. `map_name` refers to the file name without the extension.
 pub fn loadMap(self: *Self, allocator: std.mem.Allocator, map_name: []const u8) !void {
     if (self.arena != null) self.arena.?.deinit();
+    
     self.arena = std.heap.ArenaAllocator.init(allocator);
+    const arena_allocator = self.arena.?.allocator(); 
+
     self.map_data = try RuntimeMap.loadFromFile(
-    self.arena.?.allocator(),
+    arena_allocator,
     allocator,
         map_name
     );
-    try self.updateTileRenderCache(game_state.player.char.movement.pos);
+    if (self.collision_map.collisions.capacity() == 0)
+        try self.collision_map.collisions.ensureTotalCapacity(arena_allocator, 1024);
+    try self.updateCache(game_state.player.char.movement.pos);
 }
 
-pub fn updateTileRenderCache(self: *Self, player_pos: Vector2) !void {
+pub fn updateCache(self: *Self, player_pos: Vector2) !void {
     if (self.current_chunk.equals(getChunkCoordFromPos(player_pos))) return;
     self.current_chunk = getChunkCoordFromPos(player_pos);
 
+    self.collision_map.collisions.clearRetainingCapacity();
+
+    const allocator = self.arena.?.allocator();
     const chunk_offsets: [9]ChunkCoordinates = .{
         .{.x = -1, .y = -1},
         .{.x = 0, .y = -1},
@@ -123,7 +139,6 @@ pub fn updateTileRenderCache(self: *Self, player_pos: Vector2) !void {
     };
 
     var index: usize = 0;
-
     for (self.map_data.tile_map.layers) |layer| {
         for (chunk_offsets) |offset| {
             const current_chunk_coords = self.current_chunk.add(offset);
@@ -153,16 +168,47 @@ pub fn updateTileRenderCache(self: *Self, player_pos: Vector2) !void {
                     settings.tile_size,
                 );
 
+                const tile_properties = self.map_data.tile_map.tile_properties.getPtr(chunk.tile_ids[i]);
+
                 self.tile_render_cache[index] = .{
                     .source_rect = tile_source_rect,
                     .dest_rect = tile_dest_rect,
-                    .properties = self.map_data.tile_map.tile_properties.getPtr(chunk.tile_ids[i]),
+                    .properties = tile_properties,
                 };
+
+                if (tile_properties != null and tile_properties.?.collision != null) {
+                    // std.debug.print("{any} - {any}\n\n", .{Coordinates.fromPosition(.{.x = tile_dest_rect.x, .y = tile_source_rect.y}), tile_properties.?.collision.?});
+                    try self.collision_map.collisions.put(
+                        allocator,
+                        Coordinates.fromPosition(.{.x = tile_dest_rect.x, .y = tile_dest_rect.y}),
+                        &tile_properties.?.collision.?,
+                    );
+                }
+
                 index += 1;
             }
         }
     }
 }
+
+const CollisionMap = struct {
+    collisions: std.AutoHashMapUnmanaged(Coordinates, *Rectangle) = .empty,
+
+    pub const init = CollisionMap{};
+
+    pub fn getCollisionAtPos(self: *CollisionMap, player_pos: Vector2) ?Rectangle {
+        const coords = Coordinates.fromPosition(player_pos);
+        const snapped_pos = coords.multiplyScalar(settings.tile_size).toVector2();
+        const collision_rect = self.collisions.get(coords);
+        return if (collision_rect) |rect| Rectangle{
+                .x = rect.x + snapped_pos.x,
+                .y = rect.y + snapped_pos.y,
+                .width = rect.width,
+                .height = rect.height,
+            }
+            else null;
+    }
+};
 
 const TileDrawData = struct {
     source_rect: Rectangle,
@@ -329,7 +375,6 @@ pub const RuntimeMap = MapDataDef(.HashMap);
 pub fn MapDataDef(comptime value_container: ContainerType) type {
     return struct {
         tile_map: TileMap,
-        collision_map: CollisionMap,
         markers: []Marker,
 
         pub const TileMap = struct {
@@ -343,6 +388,7 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
                 id: i32,
                 frames: ?u8 = null,
                 frame_time: ?u8 = null,
+                collision: ?Rectangle = null,
             };
 
             pub const TileLayer = struct {
@@ -379,18 +425,6 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
                     }   
                 };
             };
-        };
-
-        pub const CollisionMap = struct {
-            collision_shapes: switch (value_container) {
-                .Array => []Rectangle,
-                .HashMap => std.AutoHashMapUnmanaged(Coordinates, Rectangle),
-            },
-
-            pub fn getTileCollision(self: *CollisionMap, player_pos: Vector2) ?Rectangle {
-                const coords = Coordinates.fromPosition(player_pos);
-                return self.collision_shapes.get(coords);
-            }
         };
 
         pub const Marker = struct {
@@ -451,10 +485,10 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
                 .{}
             );
 
-            return try storedMapToRuntimeMap(arena_allocator, stored_map);
+            return try toRuntimeMap(arena_allocator, stored_map);
         }
 
-        fn storedMapToRuntimeMap(arena_allocator: std.mem.Allocator, stored_map: StoredMap) !RuntimeMap {
+        fn toRuntimeMap(arena_allocator: std.mem.Allocator, stored_map: StoredMap) !RuntimeMap {
             return RuntimeMap{
                 .tile_map = .{
                     .layers = blk: {
@@ -468,7 +502,7 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
                                 RuntimeMap.TileMap.TileLayer.TileChunk
                             ).empty;
                             try chunk_map.ensureTotalCapacity(arena_allocator, 128);
-                            // TODO maybe increase as time goes on. --------------------------------/\
+                            // TODO increase as time goes on. --------------------------------------/\
                             for (stored_map.tile_map.layers[i].chunks) |chunk| {
                                 try chunk_map.put(
                                     arena_allocator,
@@ -485,39 +519,20 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
                         break :blk tile_layers;
                     },
                     .tile_properties = blk: {
-                        var tile_property_list = std.AutoHashMapUnmanaged(
+                        var tile_property_map = std.AutoHashMapUnmanaged(
                             i32,
                             TileMap.TileProperties
                         ).empty;
-                        try tile_property_list.ensureTotalCapacity(arena_allocator, 128);
-                        // TODO maybe increase as time goes on. -----------------------------------------/\
+                        try tile_property_map.ensureTotalCapacity(arena_allocator, 128);
+                        // TODO increase as time goes on. ----------------------------------------------/\
                         for (stored_map.tile_map.tile_properties) |prop| {
-                            try tile_property_list.put(
+                            try tile_property_map.put(
                                 arena_allocator,
                                 prop.id,
                                 prop,
                             );
                         }
-                        break :blk tile_property_list;
-                    },
-                },
-                .collision_map = RuntimeMap.CollisionMap{
-                    .collision_shapes = blk: {
-                        var collisions = std.AutoHashMapUnmanaged(
-                            Coordinates,
-                            Rectangle
-                        ).empty;
-                        try collisions.ensureTotalCapacity(arena_allocator, 128);
-                        for (stored_map.collision_map.collision_shapes) |rect| {
-                            try collisions.put(
-                                arena_allocator,
-                                Coordinates.fromPosition(.{
-                                    .x = rect.x,
-                                    .y = rect.y,
-                                }),
-                                @bitCast(rect));
-                        }
-                        break :blk collisions;
+                        break :blk tile_property_map;
                     },
                 },
                 .markers = blk: {

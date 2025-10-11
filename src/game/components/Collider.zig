@@ -7,6 +7,7 @@ const Rectangle = rl.Rectangle;
 const Vector2 = rl.Vector2;
 
 hitbox: Rectangle,
+// TODO cache most recent collision to not have to ask the hash table every frame.
 
 const Self = @This();
 
@@ -23,7 +24,7 @@ pub fn checkCollisionAtPos(self: *Self, pos: Vector2) bool {
         1,
         std.math.maxInt(u8)
     );
-            
+
     return checkCollisionAtPosManualSize(self, pos, x_range, y_range);
 }
 
@@ -38,7 +39,6 @@ pub fn checkCollisionAtPosManualSize(self: *Self, pos: Vector2, x_range: u8, y_r
         self.hitbox.height,
     );
 
-    var is_colliding = false;
     for (0..x_range * 2 + 1) |xo| {
         const x_offset = @as(i8, @intCast(xo)) - @as(i8, @intCast(x_range));
         for (0..y_range * 2 + 1) |yo| {
@@ -52,11 +52,11 @@ pub fn checkCollisionAtPosManualSize(self: *Self, pos: Vector2, x_range: u8, y_r
                 settings.tile_size
             ));
 
-            const collision_shape = game_state.map.map_data.collision_map.getTileCollision(offset_pos) orelse continue;
-            is_colliding = is_colliding or positioned_hitbox.checkCollision(collision_shape);
+            const collision_shape = game_state.map.collision_map.getCollisionAtPos(offset_pos) orelse continue;
+            if (positioned_hitbox.checkCollision(collision_shape)) return true;
         }
     }
-    return is_colliding;
+    return false;
 }
 
 /// Retuns as an offset from the position.

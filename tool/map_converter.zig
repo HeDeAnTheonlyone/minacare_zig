@@ -8,28 +8,31 @@ const tiled_types = struct {
     const MapData = struct {
         allocator: std.mem.Allocator,
         tile_layers: []TileLayer,
-        special_tile_list: *SpecialTileList,
-        collision_layer: *CollisionLayer,
+        special_tiles: *SpecialTiles,
         marker_layer: *MarkerLayer,
 
         fn init(allocator: std.mem.Allocator, layer_count: usize) !MapData {
             return MapData{
                 .allocator = allocator,
                 .tile_layers = try allocator.alloc(TileLayer, layer_count),
-                .special_tile_list = try allocator.create(SpecialTileList),
+                .special_tiles = try allocator.create(SpecialTiles),
                 .marker_layer = try allocator.create(MarkerLayer),
-                .collision_layer = try allocator.create(CollisionLayer),
             };
         }
     };
 
-    const SpecialTileList = struct {
-        tiles: []TilePropertyList,
+    const SpecialTiles = struct {
+        tiles: []TileData,
     };
 
-    const TilePropertyList = struct {
+    const TileData = struct {
         id: u32,
-        properties: []TileProperty,
+        objectgroup: ?CollisionData = null,
+        properties: ?[]TileProperty = null,
+    };
+
+    const CollisionData = struct {
+        objects: []RectObj,
     };
 
     const TileProperty = struct {
@@ -46,7 +49,7 @@ const tiled_types = struct {
     const TileLayer = struct {
         chunks: []TileChunk,
         startx: i32,
-        starty:i32, 
+        starty: i32, 
         width: u32, // measured in tiles
         height: u32, // measured in tiles
         name: []const u8,
@@ -57,10 +60,6 @@ const tiled_types = struct {
         y: i32,
         width: u32,
         height: u32,
-    };
-
-    const CollisionLayer = struct {
-        objects: []RectObj,
     };
 
     const PointObj = struct {
@@ -114,7 +113,7 @@ pub fn start() !void {
 
                 try std.zon.stringify.serialize(
                     converted_map_data,
-                    .{.whitespace = false},
+                    .{.whitespace = true},
                     &file_writer.interface
                 );
             },
@@ -136,14 +135,14 @@ fn parseData(allocator: std.mem.Allocator, json_str: []const u8) !tiled_types.Ma
 
     var map_data = try tiled_types.MapData.init(
         allocator,
-        p_layers.len - 2,
+        p_layers.len - 1,
     );
-    
+
     try extractRelevantMapData(
-        tiled_types.SpecialTileList,
+        tiled_types.SpecialTiles,
         allocator,
         parsed.value.object.get("tilesets").?.array.items[0],
-        map_data.special_tile_list,
+        map_data.special_tiles,
     );
     
     var tile_layer_count: u8 = 0;
@@ -171,14 +170,6 @@ fn parseData(allocator: std.mem.Allocator, json_str: []const u8) !tiled_types.Ma
                     map_data.marker_layer
                 );
             }
-            else if (std.mem.eql(u8, name, "collisions")) {
-                try extractRelevantMapData(
-                    tiled_types.CollisionLayer,
-                    allocator,
-                    entry,
-                    map_data.collision_layer
-                );
-            }
         }
     }
 
@@ -190,7 +181,7 @@ fn extractRelevantMapData(T: type, allocator: std.mem.Allocator, json_value: std
         T,
         allocator,
         json_value,
-        .{.ignore_unknown_fields = true, }
+        .{.ignore_unknown_fields = true,}
     );
     ptr.* = parsed.value;
 }
@@ -233,42 +224,45 @@ fn convertMap(allocator: std.mem.Allocator, map_data: tiled_types.MapData) !Stor
                 break :outer_blk layers;
             },
             .tile_properties = outer_blk: {
-                const tiles = map_data.special_tile_list.tiles;
+                const tiles = map_data.special_tiles.tiles;
                 var properties = try allocator.alloc(StoredMap.TileMap.TileProperties, tiles.len);
 
-                for(0..tiles.len) |i| {
+                for (0..tiles.len) |i| {
                     properties[i] = inner_blk: {
                         var property = StoredMap.TileMap.TileProperties{
                             .id = @intCast(tiles[i].id),
                         };
-                        for (tiles[i].properties) |p| {
-                            inline for (comptime std.meta.fieldNames(StoredMap.TileMap.TileProperties)) |field| {
-                                if (std.mem.eql(u8, field, p.name))
-                                @field(property, field) = p.value;
+                        if (tiles[i].properties) |prop| {
+                            for (prop) |p| {
+                                inline for (comptime std.meta.fieldNames(StoredMap.TileMap.TileProperties)[1..]) |field| {
+                                    if (std.mem.eql(u8, field, p.name)) {
+                                        const fieldType = @typeInfo(@FieldType(StoredMap.TileMap.TileProperties, field)).optional.child;
+                                        if (fieldType == @TypeOf(p.value))
+                                            @field(property, field) = p.value;
+                                    }
+                                }
                             }
+                        }
+                        if (tiles[i].objectgroup) |collisions| {
+                            if (collisions.objects.len > 1) {
+                                var al  = std.io.Writer.Allocating.init(allocator);
+                                try al.writer.print(
+                                    "Tile with id {d} has multiple collision shapes assigned to it.",
+                                    .{tiles[i].id},
+                                );
+                                @panic(al.written());
+                            }
+                            property.collision = rl.Rectangle{
+                                .x = @floatFromInt(collisions.objects[0].x),
+                                .y = @floatFromInt(collisions.objects[0].y),
+                                .width = @floatFromInt(collisions.objects[0].width),
+                                .height = @floatFromInt(collisions.objects[0].height),
+                            };
                         }
                         break :inner_blk property;
                     };
                 }
                 break :outer_blk properties;
-            }
-        },
-        .collision_map = .{
-            .collision_shapes = blk: {
-                const col_objs = map_data.collision_layer.objects;
-                var collisions = try allocator.alloc(
-                    rl.Rectangle,
-                    col_objs.len
-                );
-                for (0..collisions.len) |i| {
-                    collisions[i] = rl.Rectangle{
-                        .x = @floatFromInt(col_objs[i].x),
-                        .y = @floatFromInt(col_objs[i].y),
-                        .width = @floatFromInt(col_objs[i].width),
-                        .height = @floatFromInt(col_objs[i].height),
-                    };
-                }
-                break :blk collisions;
             }
         },
         .markers = blk: {

@@ -6,6 +6,7 @@ const settings = @import("../lib.zig").app.settings;
 pub var show_debug_menu = false;
 
 pub var show_fps = true;
+pub var show_player_pos = false;
 pub var show_character_hitbox = false;
 pub var show_character_origin = false;
 pub var show_character_center = false;
@@ -18,9 +19,10 @@ comptime {
         @compileError("The debug module is not allowed in release builds.");
 }
 
-pub fn getSaveable() struct {*bool, *bool, *bool, *bool, *bool, *bool, *bool} {
+pub fn getSaveable() struct {*bool, *bool, *bool, *bool, *bool, *bool, *bool, *bool} {
     return .{
         &show_fps,
+        &show_player_pos,
         &show_character_hitbox,
         &show_character_origin,
         &show_character_center,
@@ -56,9 +58,10 @@ pub fn drawDebugPanel() !void {
 
     const check_boxes = [_]struct{[:0]const u8, *bool}{
         .{"FPS", &show_fps},
-        .{"Player Hitbox", &show_character_hitbox},
-        .{"Player Origin", &show_character_origin},
-        .{"Player Centerpoint", &show_character_center},
+        .{"Player Pos", &show_player_pos},
+        .{"Character Hitboxe", &show_character_hitbox},
+        .{"Character Origin", &show_character_origin},
+        .{"Character Centerpoint", &show_character_center},
         .{"Tilemap Collisions", &show_tile_map_collisions},
         .{"Chunk Bound", &show_current_chunk_bounds},
         .{"Error Tiles", &show_error_tiles},

@@ -51,15 +51,15 @@ pub fn init() !void {
         try game.character_spawner.Cerby.spawn(
             .{ .coordinates = .{
                 .x = 0,
-                .y = 0
+                .y = 40
             }}
         )
     );
     try events.on_load.add(.init(&player, "syncTransformation"), 0);
     try events.on_update.add(.init(&player, "update"), 0);
     try events.on_draw_world.add(.init(&player, "draw"), 0);
-
-    try player.char.movement.events.on_pos_changed.add(.init(&map, "updateTileRenderCache"), 0);
+    
+    try player.char.movement.events.on_pos_changed.add(.init(&map, "updateCache"), 0);
 
     text_box = .init;
     try events.on_draw_ui.add(.init(&text_box, "draw"), 0);
@@ -100,7 +100,7 @@ pub fn draw() !void {
     events.on_draw_ui.dispatch({}) catch unreachable;
 
     if (@import("builtin").mode == .Debug) {
-        try debug.drawDebugPanel();
+        try debugDraw();
         // if (debug.show_fps) @import("drawer.zig").drawFps(.{
         //     .x = 200,
         //     .y = 10,
@@ -114,7 +114,33 @@ pub fn draw() !void {
     });
 }
 
-fn debugDraw() void {
+fn debugDraw() !void {
+    if (debug.show_player_pos) {
+        const std = @import("std");
+        var buf: [32:0]u8 = @splat(0);
+        var writer = std.io.Writer.fixed(&buf);
+        const coords = TileMap.Coordinates.fromPosition(player.char.movement.pos);
+        try writer.print("x:[ c: {d} - p: {d} ]", .{coords.x, player.char.movement.pos.x});
+        const x = @divFloor(app.settings.render_width, 2);
+        rl.drawText(
+            writer.buffer[0..writer.end:0],
+            x,
+            30,
+            24,
+            .dark_gray,
+        );
+        writer.end = 0;
+        buf = @splat(0);
+        try writer.print("y:[ c: {d} - p: {d} ]", .{coords.y, player.char.movement.pos.y});
+        rl.drawText(
+            writer.buffer[0..writer.end:0],
+            x,
+            60,
+            24,
+            .dark_gray,
+        );
+    }
+
     try debug.drawDebugPanel();
 }
 

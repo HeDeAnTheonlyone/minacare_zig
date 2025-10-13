@@ -181,7 +181,7 @@ fn extractRelevantMapData(T: type, allocator: std.mem.Allocator, json_value: std
         T,
         allocator,
         json_value,
-        .{.ignore_unknown_fields = true,}
+        .{.ignore_unknown_fields = @import("builtin").mode == .Debug}
     );
     ptr.* = parsed.value;
 }

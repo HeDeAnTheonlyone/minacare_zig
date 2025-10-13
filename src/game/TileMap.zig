@@ -246,7 +246,7 @@ pub fn updateCache(self: *Self, player_pos: Vector2) !void {
                     );
                 }
 
-                if (has_properties and tile_properties.?.*.y_origin_offset != null) {
+                if (has_properties and tile_properties.?.y_origin_offset != null) {
                     y_sort_tile_count += 1;
                     self.tile_render_cache[cache_len - y_sort_tile_count] = .{
                         .source_rect = tile_source_rect,

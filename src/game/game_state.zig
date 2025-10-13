@@ -16,7 +16,6 @@ const character_spritehseet_path = "assets/textures/characters_spritesheet.png";
 const tile_spritesheet_path = "assets/textures/tile_spritesheet.png";
 const default_map = TileMap.Maps.minaland;
 
-/// An in_game counter for all kinds of stuff that needs it.
 pub var map: TileMap = undefined;
 pub var player: Player = undefined;
 pub var text_box: game.TextBox = undefined;
@@ -29,6 +28,7 @@ pub var events: struct {
     on_draw_ui: event.Dispatcher(void, 16),
     on_exit: event.Dispatcher(void, 8),
 } = undefined;
+/// An in_game counter for all kinds of stuff that needs it.
 pub var counter: f32 = 0;
 pub var current_map: TileMap.Maps = undefined;
 pub var paused: bool = false;
@@ -69,15 +69,42 @@ pub fn init() !void {
     try events.on_update.add(.init(&text_box, "update"), 0);
     try text_box.events.on_popup.add(.init(Self, "pause"), 0);
     try text_box.events.on_close.add(.init(Self, "unpause"), 0);
-    
-    // try util.tween.create(
-    //     rl.Vector2,
-    //     &player.char.movement.pos,
-    //     player.char.movement.pos.add(.{.x = 200, .y = 0}),
-    //     10,
-    //     &counter
-    // );
+
+    // try events.on_load.add(.init(Self, "A"), -10);
 }
+
+// pub fn A() !void {
+//     const a = try util.tween.create(
+//         rl.Vector2,
+//         &player.char.movement.pos,
+//         player.char.movement.pos.add(.{.x = 200, .y = 0}),
+//         3,
+//         &counter
+//     );
+//     try a.events.on_finished.add(
+//         .init(
+//             Self,
+//             "B"
+//         ),
+//         0
+//     );
+// }
+// pub fn B() !void {
+//     const a = try util.tween.create(
+//         rl.Vector2,
+//         &player.char.movement.pos,
+//         player.char.movement.pos.add(.{.x = -200, .y = 0}),
+//         3,
+//         &counter
+//     );
+//     try a.events.on_finished.add(
+//         .init(
+//             Self,
+//             "A"
+//         ),
+//         0
+//     );
+// }
 
 pub fn deinit() void {
     save();

@@ -14,9 +14,9 @@ const debug = if (@import("builtin").mode == .Debug) util.debug;
 const Self = @This();
 const character_spritehseet_path = "assets/textures/characters_spritesheet.png";
 const tile_spritesheet_path = "assets/textures/tile_spritesheet.png";
+const default_map = TileMap.Maps.minaland;
 
 /// An in_game counter for all kinds of stuff that needs it.
-pub var counter: f32 = 0;
 pub var map: TileMap = undefined;
 pub var player: Player = undefined;
 pub var text_box: game.TextBox = undefined;
@@ -29,6 +29,8 @@ pub var events: struct {
     on_draw_ui: event.Dispatcher(void, 16),
     on_exit: event.Dispatcher(void, 8),
 } = undefined;
+pub var counter: f32 = 0;
+pub var current_map: TileMap.Maps = undefined;
 pub var paused: bool = false;
 
 
@@ -45,13 +47,14 @@ pub fn init() !void {
     };
 
     map = TileMap.init(&tile_spritesheet);
-    try events.on_draw_world.add(.init(&map, "draw"), 100);
+    try events.on_draw_world.add(.init(&map, "drawBackground"), 100);
+    try events.on_draw_world.add(.init(&map, "drawForeground"), -100);
     
     player = try Player.init(
         try game.character_spawner.Cerby.spawn(
             .{ .coordinates = .{
                 .x = 0,
-                .y = 40
+                .y = 0
             }}
         )
     );
@@ -85,6 +88,12 @@ pub fn deinit() void {
     tile_spritesheet.unload();
 }
 
+pub fn getSaveable() struct {*TileMap.Maps} {
+    return .{
+        &current_map
+    };
+}
+
 /// The games root update function
 pub fn update(delta: f32) !void {
     counter += delta;
@@ -94,10 +103,10 @@ pub fn update(delta: f32) !void {
 /// The games root draw function
 pub fn draw() !void {
     rl.beginMode2D(player.cam);
-    events.on_draw_world.dispatch({}) catch unreachable;
+    try events.on_draw_world.dispatch({});
     rl.endMode2D();
     
-    events.on_draw_ui.dispatch({}) catch unreachable;
+    try events.on_draw_ui.dispatch({});
 
     if (@import("builtin").mode == .Debug) {
         try debugDraw();
@@ -146,10 +155,8 @@ fn debugDraw() !void {
 
 /// Gets and loads save data if available.
 fn load() !void {
-    persistence.load(
-        &player,
-        .player,
-    );
+    persistence.load(Self, .game_state);
+    persistence.load(&player, .player);
 
     if (@import("builtin").mode == .Debug) {
         persistence.load(
@@ -163,20 +170,25 @@ fn load() !void {
 
 /// Saves the current game state
 fn save() void {
+    persistence.save(Self, .game_state);
     persistence.save(&player, .player);
+
     if (@import("builtin").mode == .Debug) {
         persistence.save(debug, .debug);
     }
 }
 
 /// Continue the game by loading the saved progress.
-pub fn loadGame() !void {
+pub fn loadGame(allocator: @import("std").mem.Allocator) !void {
     try load();
+    try map.loadMap(allocator, current_map);
 }
 
-/// Delete progress and start game fresh.
-pub fn newGame() !void {
-    try persistence.delete();    
+/// Delete progress and start a fresh game.
+pub fn newGame(allocator: @import("std").mem.Allocator) !void {
+    try persistence.delete();
+    current_map = default_map;
+    try map.loadMap(allocator, current_map);
 }
 
 pub fn pause() !void {

@@ -70,11 +70,25 @@ pub fn debugDraw(self: *Self) void {
             .orange
         );
     }
+    if (debug.show_character_bottom) {
+        drawer.drawCircle(
+            .{
+                .x = self.getCenter().x,
+                .y = self.getBottomOffset(),
+            },
+            5,
+            .orange
+        );
+    }
 }
 
 /// Returns the position of the logical center point
 pub fn getCenter(self: *Self) Vector2 {
     return self.movement.pos.add(self.collider.getCenter());
+}
+
+pub fn getBottomOffset(self: *Self) f32 {
+    return self.movement.pos.y + self.collider.getBottomOffset();
 }
 
 fn moveAndCollide(self: *Self, delta: f32) !void {

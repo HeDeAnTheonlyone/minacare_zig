@@ -21,7 +21,7 @@ pub fn main() !void {
     rl.initWindow(
         settings.window_width,
         settings.window_height,
-        "Minacare"
+        "Minaland"
     );
     defer rl.closeWindow();
 
@@ -39,9 +39,6 @@ pub fn main() !void {
 
     try game_state.init();
     defer game_state.deinit();
-
-    // DEBUG switch out for real map later
-    try game_state.map.loadMap(app_context.gpa, "test");
 
     game_loop: while(!rl.windowShouldClose())
     {

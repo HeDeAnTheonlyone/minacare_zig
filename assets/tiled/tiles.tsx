@@ -467,6 +467,31 @@
    <object id="1" x="0" y="0" width="14" height="16"/>
   </objectgroup>
  </tile>
+ <tile id="3090">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3091">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3093">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3094">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3095">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
  <tile id="3328">
   <objectgroup draworder="index" id="2">
    <object id="1" x="2" y="0" width="14" height="15"/>
@@ -507,6 +532,56 @@
    <object id="1" x="0" y="0" width="13" height="14"/>
   </objectgroup>
  </tile>
+ <tile id="3342">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3343">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3344">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3345">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3346">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3347">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3348">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3349">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3350">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3351">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
  <tile id="3585">
   <objectgroup draworder="index" id="2">
    <object id="1" x="2" y="0" width="14" height="15"/>
@@ -522,6 +597,16 @@
    <object id="1" x="0" y="0" width="14" height="14"/>
   </objectgroup>
  </tile>
+ <tile id="3588">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3589">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
  <tile id="3590">
   <objectgroup draworder="index" id="2">
    <object id="1" x="2" y="0" width="14" height="15"/>
@@ -535,6 +620,297 @@
  <tile id="3592">
   <objectgroup draworder="index" id="2">
    <object id="1" x="0" y="0" width="13" height="14"/>
+  </objectgroup>
+ </tile>
+ <tile id="3593">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3594">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3595">
+  <properties>
+   <property name="y_origin_offset" type="int" value="15"/>
+  </properties>
+ </tile>
+ <tile id="3598">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3599">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3600">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3601">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3602">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3603">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3604">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3605">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3606">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3607">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3841">
+  <properties>
+   <property name="y_origin_offset" type="int" value="72"/>
+  </properties>
+ </tile>
+ <tile id="3842">
+  <properties>
+   <property name="y_origin_offset" type="int" value="72"/>
+  </properties>
+ </tile>
+ <tile id="3844">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3845">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3846">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3847">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3848">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3849">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3850">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3854">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3855">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3856">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="3857">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="4096">
+  <properties>
+   <property name="y_origin_offset" type="int" value="56"/>
+  </properties>
+ </tile>
+ <tile id="4097">
+  <properties>
+   <property name="y_origin_offset" type="int" value="56"/>
+  </properties>
+ </tile>
+ <tile id="4098">
+  <properties>
+   <property name="y_origin_offset" type="int" value="56"/>
+  </properties>
+ </tile>
+ <tile id="4099">
+  <properties>
+   <property name="y_origin_offset" type="int" value="56"/>
+  </properties>
+ </tile>
+ <tile id="4100">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="4101">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="4102">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="4103">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="4104">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="4110">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="4111">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="4112">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="4113">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="4352">
+  <properties>
+   <property name="y_origin_offset" type="int" value="40"/>
+  </properties>
+ </tile>
+ <tile id="4353">
+  <properties>
+   <property name="y_origin_offset" type="int" value="40"/>
+  </properties>
+ </tile>
+ <tile id="4354">
+  <properties>
+   <property name="y_origin_offset" type="int" value="40"/>
+  </properties>
+ </tile>
+ <tile id="4355">
+  <properties>
+   <property name="y_origin_offset" type="int" value="40"/>
+  </properties>
+ </tile>
+ <tile id="4608">
+  <properties>
+   <property name="y_origin_offset" type="int" value="24"/>
+  </properties>
+ </tile>
+ <tile id="4609">
+  <properties>
+   <property name="y_origin_offset" type="int" value="24"/>
+  </properties>
+ </tile>
+ <tile id="4610">
+  <properties>
+   <property name="y_origin_offset" type="int" value="24"/>
+  </properties>
+ </tile>
+ <tile id="4611">
+  <properties>
+   <property name="y_origin_offset" type="int" value="24"/>
+  </properties>
+ </tile>
+ <tile id="4612">
+  <properties>
+   <property name="y_origin_offset" type="int" value="29"/>
+  </properties>
+ </tile>
+ <tile id="4613">
+  <properties>
+   <property name="y_origin_offset" type="int" value="29"/>
+  </properties>
+ </tile>
+ <tile id="4614">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="4615">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="4616">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="4617">
+  <properties>
+   <property name="y_origin_offset" type="int" value="0"/>
+  </properties>
+ </tile>
+ <tile id="4865">
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="4" y="0" width="12" height="11"/>
+  </objectgroup>
+ </tile>
+ <tile id="4866">
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="0" y="0" width="14" height="11"/>
+  </objectgroup>
+ </tile>
+ <tile id="4868">
+  <properties>
+   <property name="y_origin_offset" type="int" value="13"/>
+  </properties>
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="11" y="9" width="5" height="6"/>
+  </objectgroup>
+ </tile>
+ <tile id="4869">
+  <properties>
+   <property name="y_origin_offset" type="int" value="13"/>
+  </properties>
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="0" y="9" width="6" height="6"/>
   </objectgroup>
  </tile>
  <wangsets>

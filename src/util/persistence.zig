@@ -2,19 +2,21 @@ const std =  @import("std");
 const app_context = @import("../lib.zig").app.context;
 
 /// Names for all save files.
-const save_files = enum {
+const SaveFiles = enum {
     debug,
     settings,
     player,
+    game_state,
 };
 
-const deletable_files = enum {
-    player,
+const deletable_files =  [_][]const u8{
+    @tagName(SaveFiles.player),
+    @tagName(SaveFiles.game_state),
 };
 
 /// File name is without the extension.
 /// Data is expected to have a `getSaveable()` function.
-pub fn save(comptime data: anytype, comptime save_file: save_files) void {
+pub fn save(comptime data: anytype, comptime save_file: SaveFiles) void {
     const T, const ptr = switch (@typeInfo(@TypeOf(data))) {
         .pointer => |p| if (@typeInfo(p.child) == .@"struct")
                 .{p.child, @as(?*p.child,@ptrCast(data))}
@@ -53,7 +55,7 @@ pub fn save(comptime data: anytype, comptime save_file: save_files) void {
 
 /// File name is without the extension.
 /// Data is expected to have a `getSaveable()` function.
-pub fn load(comptime data: anytype, comptime save_file: save_files) void {
+pub fn load(comptime data: anytype, comptime save_file: SaveFiles) void {
     const T, const ptr = switch (@typeInfo(@TypeOf(data))) {
         .pointer => |p| if (@typeInfo(p.child) == .@"struct")
                 .{p.child, @as(?*p.child, @ptrCast(data))}
@@ -117,13 +119,12 @@ pub fn delete() !void {
 
     // TODO maybe just change the name of the files to backup_<file name>.zon
 
-    outer: while (try iter.next()) |entry| {
+    while (try iter.next()) |entry| {
         switch (entry.kind) {
             .file =>  {
-                _ = std.meta.stringToEnum(
-                    deletable_files,
-                    entry.name[0..entry.name.len - 4],
-                ) orelse continue :outer;
+                for (deletable_files) |file| {
+                    if (std.mem.eql(u8, entry.name, file)) break;
+                } else continue;
                 
                 try dir.deleteFile(entry.name);
             },

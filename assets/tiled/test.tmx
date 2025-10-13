@@ -2173,10 +2173,10 @@
   </data>
  </layer>
  <objectgroup id="8" name="marker">
-  <object id="2" name="hill" type="Checkpoint" x="0" y="477">
+  <object id="2" name="hill" type="checkpoint" x="0" y="477">
    <point/>
   </object>
-  <object id="5" name="field" type="Checkpoint" x="312" y="480">
+  <object id="5" name="field" type="checkpoint" x="312" y="480">
    <point/>
   </object>
  </objectgroup>

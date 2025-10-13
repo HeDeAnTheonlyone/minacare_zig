@@ -13,13 +13,21 @@ const Rectangle = rl.Rectangle;
 texture: *rl.Texture2D,
 map_data: RuntimeMap = undefined,
 collision_map: CollisionMap = .init,
-tile_render_cache: [render_cache_size]?TileDrawData = @splat(null),
+tile_render_cache: []TileDrawData = undefined,
+background_tiles: []TileDrawData = undefined,
+y_sorting_tiles: []TileDrawData = undefined,
+y_sort_split_index: usize = 0,
 current_chunk: ChunkCoordinates = Coordinates.splat(std.math.maxInt(i32)),
 arena: ?std.heap.ArenaAllocator = null,
 
 const Self = @This();
-/// 2 layers * 9 chunks * 32 tiles horizontal * 32 tiles vertical
-const render_cache_size = 2 * 9 * @as(u32, @intCast(settings.chunk_size)) * @as(u32, @intCast(settings.chunk_size));
+const concurrent_active_chunks = 9;
+const tiles_per_chunk = std.math.powi(usize, @intCast(settings.chunk_size), 2) catch unreachable;
+
+pub const Maps = enum {
+    @"test",
+    minaland,
+};
 
 /// `backing_allocator` will be put into an arena for single call free of all the managed memory with `deinit()`.
 /// 
@@ -34,34 +42,47 @@ pub fn deinit(self: *Self) void {
     if (self.arena != null) self.arena.?.deinit();
 }
 
-pub fn drawCallback(self_: *anyopaque, _: void) void {
-    const self: Self = @alignCast(@ptrCast(self_));
-    self.draw();
-} 
-
-pub fn draw(self: *Self) !void {
-    for (self.tile_render_cache) |opt_draw_data| {
-        const draw_data = opt_draw_data orelse continue;
-        var tmp_source_rect = draw_data.source_rect;
-        if (
-            draw_data.properties != null and
-            draw_data.properties.?.frames != null and
-            draw_data.properties.?.frame_time != null
-        ) {
-            const prop = draw_data.properties.?;
-            const sub_frame = @as(u32, @intFromFloat(@divFloor(
-                game_state.counter * settings.base_framerate,
-                @as(f32, @floatFromInt(prop.frame_time.?))
-            )));
-            const frame = @rem(sub_frame, prop.frames.?);
-            const shift = frame * settings.tile_size;
-
-            tmp_source_rect.shift(.x, @floatFromInt(shift));
-        }
-
+pub fn drawBackground(self: *Self) !void {
+    for (self.background_tiles) |draw_data| {
         drawer.drawTexturePro(
             self.texture.*,
-            tmp_source_rect,
+            draw_data.source_rect,
+            draw_data.dest_rect,
+            Vector2.zero(),
+            0,
+            rl.Color.white
+        );
+    }
+
+    const player_y = game_state.player.char.getBottomOffset();
+    for (self.y_sorting_tiles) |draw_data| {
+        if (
+            draw_data.dest_rect.y +
+            @as(f32, @floatFromInt(draw_data.properties.?.y_origin_offset.?)) >
+            player_y
+        ) continue;
+            drawer.drawTexturePro(
+                self.texture.*,
+                getAnimationFrameSourceRect(draw_data),
+                draw_data.dest_rect,
+                Vector2.zero(),
+                0,
+                rl.Color.white
+            );
+    }
+}
+
+pub fn drawForeground(self: *Self) !void {
+    const player_y = game_state.player.char.getBottomOffset();
+    for (self.y_sorting_tiles) |draw_data| {
+        if (
+            draw_data.dest_rect.y +
+            @as(f32, @floatFromInt(draw_data.properties.?.y_origin_offset.?)) <=
+            player_y
+        ) continue;
+        drawer.drawTexturePro(
+            self.texture.*,
+            getAnimationFrameSourceRect(draw_data),
             draw_data.dest_rect,
             Vector2.zero(),
             0,
@@ -96,26 +117,70 @@ fn debugDraw(self: *Self) void {
         }
     }
     
+    if (debug.show_tile_layering) {
+        const player_y = game_state.player.char.getBottomOffset();
+        for (self.y_sorting_tiles) |tile| {
+            const dest_rect = tile.dest_rect;
+            drawer.drawRectOutline(
+                dest_rect,
+                3,
+                if (
+                    dest_rect.y +
+                    @as(f32, @floatFromInt(tile.properties.?.y_origin_offset.?)) >
+                    player_y
+                ) rl.Color.dark_green
+                else rl.Color.red,
+            );
+        }
+    }
+    
     if (debug.show_current_chunk_bounds) {
         const rect = getChunkRect(self.current_chunk);
         drawer.drawRectOutline(rect, 10, .purple);
     }
 }
 
+/// Returns the correct frame of the tile animation or just return the input if the tile has no animation.
+fn getAnimationFrameSourceRect(draw_data: TileDrawData) Rectangle {
+    if (draw_data.properties) |properties| {
+        if (
+            properties.frames != null and
+            properties.frame_time != null
+        ) {
+            const sub_frame = @as(u32, @intFromFloat(@divFloor(
+                game_state.counter * settings.base_framerate,
+                @as(f32, @floatFromInt(properties.frame_time.?))
+            )));
+            const frame = @rem(sub_frame, properties.frames.?);
+            const shift = frame * settings.tile_size;
+
+            var tmp_source_rect = draw_data.source_rect;
+            tmp_source_rect.shift(.x, @floatFromInt(shift));
+            return tmp_source_rect;
+        }
+    }
+    return draw_data.source_rect;
+}
+
 /// Deinits old map and load new map. `map_name` refers to the file name without the extension.
-pub fn loadMap(self: *Self, allocator: std.mem.Allocator, map_name: []const u8) !void {
+pub fn loadMap(self: *Self, allocator: std.mem.Allocator, map: Maps) !void {
+    self.collision_map.collisions.deinit(allocator);
     if (self.arena != null) self.arena.?.deinit();
     
     self.arena = std.heap.ArenaAllocator.init(allocator);
-    const arena_allocator = self.arena.?.allocator(); 
+    const arena_allocator = self.arena.?.allocator();
 
     self.map_data = try RuntimeMap.loadFromFile(
-    arena_allocator,
-    allocator,
-        map_name
+        arena_allocator,
+        allocator,
+        @tagName(map)
     );
-    if (self.collision_map.collisions.capacity() == 0)
-        try self.collision_map.collisions.ensureTotalCapacity(arena_allocator, 1024);
+    self.tile_render_cache = try allocator.alloc(
+        TileDrawData,
+        self.map_data.tile_map.layers.len * concurrent_active_chunks * tiles_per_chunk,
+    );
+    self.collision_map.collisions = .empty;
+    try self.collision_map.collisions.ensureTotalCapacity(arena_allocator, 1024);
     try self.updateCache(game_state.player.char.movement.pos);
 }
 
@@ -126,6 +191,7 @@ pub fn updateCache(self: *Self, player_pos: Vector2) !void {
     self.collision_map.collisions.clearRetainingCapacity();
 
     const allocator = self.arena.?.allocator();
+    const cache_len = self.tile_render_cache.len;
     const chunk_offsets: [9]ChunkCoordinates = .{
         .{.x = -1, .y = -1},
         .{.x = 0, .y = -1},
@@ -138,7 +204,8 @@ pub fn updateCache(self: *Self, player_pos: Vector2) !void {
         .{.x = 1, .y = 1},
     };
 
-    var index: usize = 0;
+    var background_tile_count: usize = 0;
+    var y_sort_tile_count: usize = 0;
     for (self.map_data.tile_map.layers) |layer| {
         for (chunk_offsets) |offset| {
             const current_chunk_coords = self.current_chunk.add(offset);
@@ -169,15 +236,9 @@ pub fn updateCache(self: *Self, player_pos: Vector2) !void {
                 );
 
                 const tile_properties = self.map_data.tile_map.tile_properties.getPtr(chunk.tile_ids[i]);
+                const has_properties = tile_properties != null;
 
-                self.tile_render_cache[index] = .{
-                    .source_rect = tile_source_rect,
-                    .dest_rect = tile_dest_rect,
-                    .properties = tile_properties,
-                };
-
-                if (tile_properties != null and tile_properties.?.collision != null) {
-                    // std.debug.print("{any} - {any}\n\n", .{Coordinates.fromPosition(.{.x = tile_dest_rect.x, .y = tile_source_rect.y}), tile_properties.?.collision.?});
+                if (has_properties and tile_properties.?.collision != null) {
                     try self.collision_map.collisions.put(
                         allocator,
                         Coordinates.fromPosition(.{.x = tile_dest_rect.x, .y = tile_dest_rect.y}),
@@ -185,10 +246,35 @@ pub fn updateCache(self: *Self, player_pos: Vector2) !void {
                     );
                 }
 
-                index += 1;
+                if (has_properties and tile_properties.?.*.y_origin_offset != null) {
+                    y_sort_tile_count += 1;
+                    self.tile_render_cache[cache_len - y_sort_tile_count] = .{
+                        .source_rect = tile_source_rect,
+                        .dest_rect = tile_dest_rect,
+                        .properties = tile_properties,
+                    };
+                }
+                else {
+                    self.tile_render_cache[background_tile_count] = .{
+                        .source_rect = tile_source_rect,
+                        .dest_rect = tile_dest_rect,
+                        .properties = tile_properties,
+                    };
+                    background_tile_count += 1;
+                }
             }
         }
     }
+
+    self.background_tiles = self.tile_render_cache[0..background_tile_count];
+    self.y_sorting_tiles = self.tile_render_cache[cache_len - y_sort_tile_count..cache_len];
+
+    std.mem.sort(
+        TileDrawData,
+        self.y_sorting_tiles,
+        false,
+        TileDrawData.lessThan
+    );
 }
 
 const CollisionMap = struct {
@@ -214,6 +300,12 @@ const TileDrawData = struct {
     source_rect: Rectangle,
     dest_rect: Rectangle,
     properties: ?*RuntimeMap.TileMap.TileProperties,
+
+    /// First parameter is necessary for std.mem.sort
+    fn lessThan(descending: bool, self: TileDrawData, cmpr: TileDrawData) bool {
+        return if (descending) self.dest_rect.y > cmpr.dest_rect.y
+            else self.dest_rect.y < cmpr.dest_rect.y;
+    } 
 };
 
 /// Chunk coordinates are the position divided by the tile size and the chunk size.
@@ -386,8 +478,9 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
 
             pub const TileProperties = struct {
                 id: i32,
-                frames: ?u8 = null,
-                frame_time: ?u8 = null,
+                frames: ?u16 = null,
+                frame_time: ?u16 = null,
+                y_origin_offset: ?u16 = null,
                 collision: ?Rectangle = null,
             };
 
@@ -434,8 +527,8 @@ pub fn MapDataDef(comptime value_container: ContainerType) type {
             name: []const u8,
 
             pub const Kind = enum(u8) {
-                Checkpoint,
-                Spawn,
+                checkpoint,
+                spawnpoint,
             };
         };
 

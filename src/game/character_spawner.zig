@@ -103,10 +103,10 @@ pub const Cerby = struct {
             
             const collider = components.Collider{
                 .hitbox = Rectangle.init(
-                    0,
-                    3,
-                    16,
-                    13,
+                    2,
+                    11,
+                    12,
+                    5,
                 ),
             };
 

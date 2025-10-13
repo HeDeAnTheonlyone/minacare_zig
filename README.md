@@ -12,6 +12,8 @@ The function names `update` and `draw` are reserved for a structs main uopdate f
 
 Sprites of animated tiles need to be all next to each other (no line wrapping). The first tile of the animation needs to have a `frames` custom data attached.
 
+The `y_origin_offset` property in a tile defines how much the origin used for y sorting is up or down relative to the tiles origin (normaly top edge of the tile).
+
 Structs that need saving/loading require a `getSaveable()` function that returns an anonymous struct of references to all the variables that should get saved.
 
 IMPORTANT:

@@ -11,6 +11,8 @@ pub var show_character_hitbox = false;
 pub var show_character_origin = false;
 pub var show_character_center = false;
 pub var show_tile_map_collisions = false;
+pub var show_character_bottom = false;
+pub var show_tile_layering = false;
 pub var show_current_chunk_bounds = false;
 pub var show_error_tiles = false;
 
@@ -19,7 +21,7 @@ comptime {
         @compileError("The debug module is not allowed in release builds.");
 }
 
-pub fn getSaveable() struct {*bool, *bool, *bool, *bool, *bool, *bool, *bool, *bool} {
+pub fn getSaveable() struct {*bool, *bool, *bool, *bool, *bool, *bool, *bool, *bool, *bool, *bool} {
     return .{
         &show_fps,
         &show_player_pos,
@@ -27,6 +29,8 @@ pub fn getSaveable() struct {*bool, *bool, *bool, *bool, *bool, *bool, *bool, *b
         &show_character_origin,
         &show_character_center,
         &show_tile_map_collisions,
+        &show_character_bottom,
+        &show_tile_layering,
         &show_current_chunk_bounds,
         &show_error_tiles,
     };
@@ -62,7 +66,9 @@ pub fn drawDebugPanel() !void {
         .{"Character Hitboxe", &show_character_hitbox},
         .{"Character Origin", &show_character_origin},
         .{"Character Centerpoint", &show_character_center},
+        .{"Character Bottom", &show_character_bottom},
         .{"Tilemap Collisions", &show_tile_map_collisions},
+        .{"Tile Layering", &show_tile_layering},
         .{"Chunk Bound", &show_current_chunk_bounds},
         .{"Error Tiles", &show_error_tiles},
     };

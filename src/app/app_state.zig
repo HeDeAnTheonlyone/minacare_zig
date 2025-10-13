@@ -1,7 +1,7 @@
-const game = @import("../lib.zig").game;
-const game_state = game.state;
+const lib = @import("../lib.zig");
+const game = lib.game;
 const menu = game.menu;
-const util = @import("../lib.zig").util;
+const util = lib.util;
 
 pub var current: State = .menu;
 pub var last: State = .menu;
@@ -23,11 +23,11 @@ pub fn switchTo(state: State) !void {
     switch(state) {
         .menu => |s| {current = s;}, 
         .load_game => {
-            try game_state.loadGame();
+            try game.state.loadGame(lib.app.context.gpa);
             current = .game;
         },
         .new_game => {
-            try game_state.newGame();
+            try game.state.newGame(lib.app.context.gpa);
             current = .game;
         },
         .game => |s| {current = s;},

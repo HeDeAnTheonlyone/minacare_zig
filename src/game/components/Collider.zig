@@ -66,3 +66,7 @@ pub fn getCenter(self: Self) Vector2 {
         .y = self.hitbox.height / 2 + self.hitbox.y,
     };
 }
+
+pub fn getBottomOffset(self: Self) f32 {
+    return self.hitbox.height + self.hitbox.y;
+}

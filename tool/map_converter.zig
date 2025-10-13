@@ -36,7 +36,7 @@ const tiled_types = struct {
     };
 
     const TileProperty = struct {
-        value: u8,
+        value: u16,
         name: []const u8,
     };
 

@@ -1,10 +1,10 @@
 const std = @import("std");
 const rl = @import("raylib");
-const lib = @import("lib.zig");
+pub const lib = @import("lib.zig");
 const app = lib.app;
 const game = lib.game;
 const util = lib.util;
-const app_context = app.context;
+const gpa = app.gpa;
 const app_state = app.state;
 const settings = app.settings;
 const persistence = util.persistence;
@@ -31,11 +31,8 @@ pub fn main() !void {
 
     rl.setTargetFPS(settings.target_fps);
 
-    try translation.init(app_context.gpa, settings.selected_language);
-    defer translation.deinit(app_context.gpa);
-
-    tween.init(app_context.gpa);
-    defer tween.deinit();
+    try translation.init(gpa.allocator, settings.selected_language);
+    defer translation.deinit(gpa.allocator);
 
     try game_state.init();
     defer game_state.deinit();
@@ -62,7 +59,7 @@ pub fn main() !void {
         );
 
         app_state.counter += delta;
-        try util.tween.update();
+        try app_state.events.on_global_update.dispatch(delta);
 
         switch (app_state.current) {
             .menu => {

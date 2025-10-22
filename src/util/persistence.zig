@@ -1,5 +1,5 @@
 const std =  @import("std");
-const app_context = @import("../lib.zig").app.context;
+const gpa = @import("../lib.zig").app.gpa;
 
 /// Names for all save files.
 const SaveFiles = enum {
@@ -96,7 +96,7 @@ pub fn load(comptime data: anytype, comptime save_file: SaveFiles) void {
 
     const parsed = std.zon.parse.fromSlice(
         @TypeOf(saveable_data),
-        app_context.gpa,
+        gpa.allocator,
         buf[0..char_count:0],
         null,
         .{},

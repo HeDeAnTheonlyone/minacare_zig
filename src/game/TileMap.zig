@@ -143,10 +143,12 @@ fn debugDraw(self: *Self) void {
 /// Returns the correct frame of the tile animation or just return the input if the tile has no animation.
 fn getAnimationFrameSourceRect(draw_data: TileDrawData) Rectangle {
     if (draw_data.properties) |properties| {
+        if (draw_data.properties.?.id == 273) std.debug.print("AADDSADSAFXADFOU=)(=)(/((U=HOIU\n", .{});
         if (
             properties.frames != null and
             properties.frame_time != null
         ) {
+            if (draw_data.properties.?.id == 273) std.debug.print("FFFFFFFFFFFFFFFFFFFUUUUUUUUUUUUUUUUUUUUUCCCCCCCCCCCCCCCKKKKKKKKKKKKK\n", .{});
             const sub_frame = @as(u32, @intFromFloat(@divFloor(
                 game_state.counter * settings.base_framerate,
                 @as(f32, @floatFromInt(properties.frame_time.?))
@@ -159,6 +161,7 @@ fn getAnimationFrameSourceRect(draw_data: TileDrawData) Rectangle {
             return tmp_source_rect;
         }
     }
+    // std.debug.print("PENIS\n", .{});
     return draw_data.source_rect;
 }
 

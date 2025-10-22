@@ -120,7 +120,7 @@ pub fn addAnimationList(self: *Self, anims: []const Animation) !void {
 pub fn addAnimation(self: *Self, anim: Animation) !void {
     if (self.animation_count == max_animations) return error.OutOfMemory;
     
-    for (self.animations) |a| {
+    for (self.animations[0..self.animation_count]) |a| {
         if (std.mem.eql(u8, a.name, anim.name))
             return error.AnimationAlreadyExists;
     }

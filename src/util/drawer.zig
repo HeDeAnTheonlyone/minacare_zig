@@ -59,4 +59,3 @@ pub fn drawCircle(center: Vector2, radius: f32, color: Color) void {
         color
     );
 }
-

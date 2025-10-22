@@ -2,10 +2,14 @@ const lib = @import("../lib.zig");
 const game = lib.game;
 const menu = game.menu;
 const util = lib.util;
+const event = util.event;
 
 pub var current: State = .menu;
 pub var last: State = .menu;
 pub var counter: f32 = 0;
+pub var events: struct {
+    on_global_update: event.Dispatcher(f32, 16) = .init,
+} = .{};
 
 const State = enum {
     menu,
@@ -23,11 +27,11 @@ pub fn switchTo(state: State) !void {
     switch(state) {
         .menu => |s| {current = s;}, 
         .load_game => {
-            try game.state.loadGame(lib.app.context.gpa);
+            try game.state.loadGame(lib.app.gpa.allocator);
             current = .game;
         },
         .new_game => {
-            try game.state.newGame(lib.app.context.gpa);
+            try game.state.newGame(lib.app.gpa.allocator);
             current = .game;
         },
         .game => |s| {current = s;},
@@ -40,4 +44,4 @@ pub fn switchTo(state: State) !void {
     }
 }
 
-// TODO if needed, add bforeEnter/beforeExit functions for each state.
+// TODO if needed, add beforEnter/beforeExit functions for each state.

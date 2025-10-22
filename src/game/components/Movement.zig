@@ -5,8 +5,8 @@ const Vector2 = rl.Vector2;
 pos: Vector2,
 speed: f32,
 events: struct {
-    on_pos_changed: event.Dispatcher(Vector2, 8),
-},
+    on_pos_changed: event.Dispatcher(Vector2, 8) = .init,
+} = .{},
 
 const Self = @This();
 
@@ -14,7 +14,6 @@ pub fn init(pos: Vector2, speed: f32) Self {
     return .{
         .pos = pos,
         .speed = speed,
-        .events = .{ .on_pos_changed = .init },
     };
 }
 

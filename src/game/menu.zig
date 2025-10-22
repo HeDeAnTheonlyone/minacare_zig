@@ -35,7 +35,7 @@ pub const main = struct {
 
     pub fn draw() void {
         style.apply(.main_menu_title);
-        _ = rg.label(Rectangle.init(0, 100, @floatFromInt(stg.render_width), 260), "Minacare");
+        _ = rg.label(Rectangle.init(0, 100, @floatFromInt(stg.render_width), 260), "Minaland");
 
         style.apply(.main_menu_buttons);
         for (&buttons, 0..) |*button, i| {
@@ -254,4 +254,3 @@ pub const pause = struct {
         // TODO;
     }
 };
-    

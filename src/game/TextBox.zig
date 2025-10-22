@@ -18,9 +18,9 @@ msg_count: u8 = 0,
 msg_pointer: u8 = 0,
 current_msg_text: [4096]u8,
 events: struct {
-    on_popup: event.Dispatcher(void,8),
-    on_close: event.Dispatcher(void, 8),
-},
+    on_popup: event.Dispatcher(void,8) = .init,
+    on_close: event.Dispatcher(void, 8) = .init,
+} = .{},
 
 const Self = @This();
 pub const init = Self{
@@ -28,10 +28,6 @@ pub const init = Self{
     // TODO make this use the settings value for that
     .display_delay = 0.02,
     .current_msg_text = undefined,
-    .events = .{
-        .on_popup = .init,
-        .on_close = .init,
-    }
 };
 const max_msg = 255;
 

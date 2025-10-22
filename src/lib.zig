@@ -1,5 +1,5 @@
 pub const app = struct {
-    pub const context = @import("app/app_context.zig");
+    pub const gpa = @import("app/gpa.zig");
     pub const state = @import("app/app_state.zig");
     pub const settings = @import("app/settings.zig");
 };
